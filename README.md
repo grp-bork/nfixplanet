@@ -1,3 +1,7 @@
+
+Requirements:
+- Prodigal V2.6.3: February, 2016
+- HMMER 3.4 (Aug 2023); http://hmmer.org/
 # nfixplanet
 
 ## Name

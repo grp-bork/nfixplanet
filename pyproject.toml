@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nfixplanet"
+version = "0.1.0"
+description = "Description goes here"
+authors = [{name = "Shahriyar Mahdi Robbani"}]
+readme = "README.md"
+requires-python = ">=3.12"
+
+[project.scripts]
+nfixplanet = "nfixplanet.nfixplanet:main"
