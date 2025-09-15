@@ -89,3 +89,20 @@ def hmmscan(input_file: str, out_file: str):
 def check_if_tool_exists(tool_name: str) -> bool:
     """Check if tool is available."""
     return shutil.which(tool_name) is not None
+
+
+def check_external_tools():
+    """Checks if tool dependencies are available."""
+    if not check_if_tool_exists("prodigal"):
+        logger.error("Prodigal not found.")
+        sys.exit(1)
+    if not check_if_tool_exists("hmmscan"):
+        logger.error("Hmmscan not found.")
+        sys.exit(1)
+    # if not external_tools.check_if_tool_exists("grep"):
+    #     logger.error("grep not found.")
+    #     sys.exit(1)
+    if not check_if_tool_exists("zcat"):
+        logger.error("zcat not found.")
+        sys.exit(1)
+    logger.info("All required software found")
