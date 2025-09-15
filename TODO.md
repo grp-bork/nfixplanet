@@ -7,3 +7,9 @@
 
 Path to lucas pipeline: `/g/scb2/bork/ustick/nfixplanet_pipeline/`
 Demo pipeline: `/g/scb2/bork/ustick/nfixplanet_pipeline/01_annotation_pipeline/code/ustick_code/01_annotation_pipeline.sh`
+
+Requirements:
+- Prodigal V2.6.3: February, 2016
+- HMMER 3.4 (Aug 2023); http://hmmer.org/
+
+**NOTE**: If there are issues delete the environment and create a new one, you double isntalled hmmer

@@ -1,5 +1,11 @@
 import shutil
 import subprocess
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+
+from .config import HMM_PROFILE_PATH, CPUS
 
 def prodigal(input_file: str, out_file: str):
     """Run prodigal
@@ -18,7 +24,7 @@ def prodigal(input_file: str, out_file: str):
                     "prodigal",
                     "-i",
                     "/dev/stdin",
-                    "-a",
+                    "-d",
                     out_file,
                     "-o",
                     "/dev/null",
@@ -35,7 +41,7 @@ def prodigal(input_file: str, out_file: str):
                     "prodigal",
                     "-i",
                     input_file,
-                    "-a",
+                    "-d",
                     out_file,
                     "-o",
                     "/dev/null",
@@ -45,8 +51,33 @@ def prodigal(input_file: str, out_file: str):
                 ],
                 universal_newlines=True,
             )
-    except subprocess.CalledProcessError:
-        print(f"[ERROR] Failed to run Prodigal {input_file}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to run Prodigal on {input_file}: {e}")
+        sys.exit(1)
+
+def hmmscan(input_file: str, out_file: str):
+    """Run hmmscan
+
+    Arguments:
+        input_file (str): full path of input fasta (fna)
+        out_file (str): fullpath of output file
+    """
+    try:
+            subprocess.check_output(
+                [
+                    "hmmscan",
+                    "--cpu",
+                    str(CPUS),
+                    "--tblout",
+                    out_file,
+                    HMM_PROFILE_PATH,
+                    input_file
+                ],
+                universal_newlines=True,
+            )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to run hmmscan on {input_file}: {e}")
+        sys.exit(1)
 
 
 def check_if_tool_exists(tool_name: str) -> bool:
