@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 from .config import HMM_PROFILE_PATH, CPUS
 
+
 def prodigal(input_file: str, out_file: str):
     """Run prodigal
 
@@ -14,6 +15,7 @@ def prodigal(input_file: str, out_file: str):
         input_file (str): full path of input fasta
         out_file (str): fullpath of output file
     """
+    logger.info("Running prodigal...")
     try:
         if input_file.endswith(".gz"):
             uncompressed = subprocess.Popen(
@@ -51,9 +53,11 @@ def prodigal(input_file: str, out_file: str):
                 ],
                 universal_newlines=True,
             )
+        logger.info("Prodigal completed")
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to run Prodigal on {input_file}: {e}")
         sys.exit(1)
+
 
 def hmmscan(input_file: str, out_file: str):
     """Run hmmscan
@@ -62,19 +66,21 @@ def hmmscan(input_file: str, out_file: str):
         input_file (str): full path of input fasta (fna)
         out_file (str): fullpath of output file
     """
+    logger.info("Running hmmscan...")
     try:
-            subprocess.check_output(
-                [
-                    "hmmscan",
-                    "--cpu",
-                    str(CPUS),
-                    "--tblout",
-                    out_file,
-                    HMM_PROFILE_PATH,
-                    input_file
-                ],
-                universal_newlines=True,
-            )
+        subprocess.check_output(
+            [
+                "hmmscan",
+                "--cpu",
+                str(CPUS),
+                "--tblout",
+                out_file,
+                HMM_PROFILE_PATH,
+                input_file,
+            ],
+            universal_newlines=True,
+        )
+        logger.info("Hmmscan completed")
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to run hmmscan on {input_file}: {e}")
         sys.exit(1)
