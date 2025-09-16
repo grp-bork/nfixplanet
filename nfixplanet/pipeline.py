@@ -7,7 +7,7 @@ from . import processing
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline(input: str, output: str):
+def run(input: str, output: str):
     external_tools.check_external_tools()
 
     # TODO: these need to go to temporary outputs
@@ -18,4 +18,4 @@ def run_pipeline(input: str, output: str):
     # external_tools.prodigal(input, prodigal_output)
     #external_tools.hmmscan(prodigal_output, hmm_output)
 
-    processing.get_best_hits(hmm_output)
+    processing.filter(hmm_output)
