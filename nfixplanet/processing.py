@@ -64,30 +64,49 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
 
 
 GENE_FAMILIES = {
-    "Chl": {
-        "ChIl": 194,
-        "ChlB": 67,
-        "ChlN": 23,
-    }
+    # "Chl": {
+    #     "ChIl": 194,
+    #     "ChlB": 67,
+    #     "ChlN": 23,
+    # }
+    # Core nif
+    "nif" : {
+        "nifD": 583.6,
+        "nifH": 279.5,
+        "nifK": 460,
+    },
+    # nifE and nifN are optional
+    "nifE" : {
+        "nifD": 583.6,
+        "nifH": 279.5,
+        "nifK": 460,
+        "nifE": 504.6,
+    },
+    "nifN" : {
+        "nifD": 583.6,
+        "nifH": 279.5,
+        "nifK": 460,
+        "nifN": 530,
+    },
 }
 
-# TODO: add special case for Nif and vnf
-def extract_nfix(df: pd.DataFrame, gene_to_score: dict[str, int], max_dist: int = 10):
-    # Filter by score thresholds
+# TODO: add special case for vnf
+def write_filtered_file(df: pd.DataFrame, gene_family: str, gene_to_score: dict[str, int], max_dist: int = 10):
+    # Only keep the required genes that pass the bit score threshold
     mask = pd.Series(False, index=df.index)
     for gene, threshold in gene_to_score.items():
         mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
-    gene_family = df[mask]
+    gene_family_df = df[mask]
 
     required_genes = set(gene_to_score.keys())
 
-    # Keep only contigs that have all required target_names
-    contigs = gene_family.groupby("contig")["target_name"].transform(
+    # Only keep contigs that have all n required genes
+    contigs = gene_family_df.groupby("contig")["target_name"].transform(
         lambda x: required_genes.issubset(set(x))
     )
-    gene_family = gene_family[contigs].sort_values(["contig", "gene"])
+    gene_family_df = gene_family_df[contigs].sort_values(["contig", "gene"])
 
-    # For each contig, find windows of genes that contain all required targets
+    # For each contig, find windows of genes that contain all n required genes
     def find_neighborhoods(group):
         # Expand neighborhoods per contig
         results = []
@@ -102,7 +121,7 @@ def extract_nfix(df: pd.DataFrame, gene_to_score: dict[str, int], max_dist: int 
             return pd.concat(results)
         return pd.DataFrame(columns=group.columns)
 
-    neighborhood_df = gene_family.groupby("contig", group_keys=False).apply(
+    neighborhood_df = gene_family_df.groupby("contig", group_keys=False).apply(
         find_neighborhoods
     )
 
@@ -110,16 +129,18 @@ def extract_nfix(df: pd.DataFrame, gene_to_score: dict[str, int], max_dist: int 
     subsets = {gene: neighborhood_df[neighborhood_df["target_name"] == gene]
                for gene in required_genes}
     for gene, subset in subsets.items():
+        # Only save nifDKH output without nifEN
+        if gene_family in("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
+            continue
+        logger.debug(gene)
         logger.debug(subset)
 
-    # TODO: write files in this function instead of returning
-
-    return neighborhood_df, subsets
+        # TODO: write files in this function
 
 
 
 def filter(path: str):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
-    extract_nfix(best_hmm_hits, GENE_FAMILIES["Chl"])
-    # logger.debug(x)
+    for gene_family, gene_to_score in GENE_FAMILIES.items():
+        write_filtered_file(best_hmm_hits, gene_family, gene_to_score)
