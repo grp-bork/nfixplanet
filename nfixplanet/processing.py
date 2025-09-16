@@ -43,12 +43,14 @@ def load_hmm_output(path: str) -> pd.DataFrame:
         if col not in columns_to_drop and col != "query_name"
     ]
     df = df[ordered_cols]
+    # These columns are needed for filtering and will be removed before the output
+    df[["contig", "gene"]] = df["query_name"].str.rsplit("_", n=1, expand=True)
     return df
 
 
-def get_best_hits(path: str) -> pd.DataFrame:
-    df = load_hmm_output(path)
-
+def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
+    # Get the lowest e-value and resolve ties with the highest bit score
+    # Resolve ties by taking the first values
     result = df.loc[
         df.groupby("query_name").apply(
             lambda g: g.sort_values(
@@ -57,6 +59,42 @@ def get_best_hits(path: str) -> pd.DataFrame:
         )
     ].reset_index(drop=True)
 
-    logger.debug(result)
-
     return result
+
+
+def extract_nfix(df: pd.DataFrame):
+    # Filter by score thresholds
+    chl = df[
+        ((df["target_name"] == "ChIl") & (df["full_score"] > 194))
+        | ((df["target_name"] == "ChlB") & (df["full_score"] > 67))
+        | ((df["target_name"] == "ChlN") & (df["full_score"] > 23))
+    ]
+    
+    # Keep only contigs that have all three target_names
+    contigs = (
+        chl.groupby("contig")["target_name"]
+        .apply(lambda x: {"ChIl", "ChlB", "ChlN"}.issubset(set(x)))
+        .loc[lambda x: x]
+        .index
+    )
+    logger.debug(list(contigs))
+
+    # Filter ChIl rows within those contigs
+    chil = df[(df["target_name"] == "ChIl") & (df["contig"].isin(contigs))]
+    chlB = df[(df["target_name"] == "ChlB") & (df["contig"].isin(contigs))]
+    chlN = df[(df["target_name"] == "ChlN") & (df["contig"].isin(contigs))]
+
+    logger.debug(chlB)
+
+    return chil
+
+
+
+def neighborhood():
+    pass
+
+
+def filter(path: str):
+    hmm_output = load_hmm_output(path)
+    best_hmm_hits = get_best_hmm_hits(hmm_output)
+    extract_nfix(best_hmm_hits)
