@@ -77,36 +77,42 @@ def extract_nfix(df: pd.DataFrame, max_dist: int = 10):
         .apply(lambda x: {"ChIl", "ChlB", "ChlN"}.issubset(set(x)))
     )
     valid_contigs = contigs[contigs].index
-    logger.debug(valid_contigs)
 
     # Filter to only those contigs
-    chl = chl[chl["contig"].isin(valid_contigs)]
+    chl = chl[chl["contig"].isin(valid_contigs)].sort_values("gene")
 
-    # Now check the "gene" neighborhood condition
-    def within_10(group):
-        return group["gene"].max() - group["gene"].min() <= 10000
+    targets = ["ChlN", "ChlB", "ChIl"]
+    targets_to_gene = {gene: None for gene in targets}
+    
+    neighborhood_queries = set()
+    for index, row in chl.iterrows():
+        # valid contig
+        if row["query_name"] in neighborhood_queries:
+            continue
+        targets_to_gene[row["target_name"]] = row["gene"]
+        # all target genes not found yet
+        if not all(targets_to_gene.values()):
+            continue
+        max_gene = max(targets_to_gene.values())
+        min_gene = min(targets_to_gene.values())
 
-    neighborhood_contigs = (
-        chl.groupby("target_name")
-        .filter(within_10)#["contig"]
-        # .unique()
-    )
+        if max_gene - min_gene <= max_dist:
+            for gene in targets_to_gene.values():
+                # build the correct query_name
+                neighborhood_queries.add(row["contig"] + "_" + str(gene))
 
-    x = neighborhood_contigs[neighborhood_contigs["contig"] == "GCA_000176015.1.genomes-contig56"]
+    neighborhood_df = chl[chl["query_name"].isin(neighborhood_queries)]
 
-    logger.debug(x)
 
-    final_contigs = chl[chl["contig"].isin(neighborhood_contigs)]
-
-    chIl = final_contigs[final_contigs["target_name"] == "ChIl"]
-    chlB = final_contigs[final_contigs["target_name"] == "ChlB"]
-    chlN = final_contigs[final_contigs["target_name"] == "ChlN"]
-    # logger.debug(chIl)
-    # logger.debug(chlB)
-    # logger.debug(chlN)
+    chIl = neighborhood_df[neighborhood_df["target_name"] == "ChIl"]
+    chlB = neighborhood_df[neighborhood_df["target_name"] == "ChlB"]
+    chlN = neighborhood_df[neighborhood_df["target_name"] == "ChlN"]
+    logger.debug(chIl)
+    logger.debug(chlB)
+    logger.debug(chlN)
 
     # Final filter
-    return chl[chl["contig"].isin(neighborhood_contigs)]
+    return None
 
 
 
