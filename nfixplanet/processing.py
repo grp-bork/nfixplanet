@@ -63,52 +63,63 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def extract_nfix(df: pd.DataFrame, max_dist: int = 10):
-    # Filter by score thresholds
-    gene_family = df[
-        ((df["target_name"] == "ChIl") & (df["full_score"] > 194))
-        | ((df["target_name"] == "ChlB") & (df["full_score"] > 67))
-        | ((df["target_name"] == "ChlN") & (df["full_score"] > 23))
-    ]
+GENE_FAMILIES = {
+    "Chl": {
+        "ChIl": 194,
+        "ChlB": 67,
+        "ChlN": 23,
+    }
+}
 
-    # Keep only contigs that have all three target_names
-    contigs = (
-        gene_family.groupby("contig")["target_name"]
-        .transform(lambda x: {"ChIl", "ChlB", "ChlN"}.issubset(set(x)))
+# TODO: add special case for Nif and vnf
+def extract_nfix(df: pd.DataFrame, gene_to_score: dict[str, int], max_dist: int = 10):
+    # Filter by score thresholds
+    mask = pd.Series(False, index=df.index)
+    for gene, threshold in gene_to_score.items():
+        mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+    gene_family = df[mask]
+
+    required_genes = set(gene_to_score.keys())
+
+    # Keep only contigs that have all required target_names
+    contigs = gene_family.groupby("contig")["target_name"].transform(
+        lambda x: required_genes.issubset(set(x))
     )
     gene_family = gene_family[contigs].sort_values(["contig", "gene"])
 
-    # For each contig, find windows of genes that contain all three targets
-    def find_neighborhoods(g):
+    # For each contig, find windows of genes that contain all required targets
+    def find_neighborhoods(group):
         # Expand neighborhoods per contig
         results = []
-        n = len(g)
+        n = len(group)
         for i in range(n):
             # take window up to max_dist on gene coordinate, not index
-            min_gene = g.iloc[i]["gene"]
-            window = g[(g["gene"] >= min_gene) & (g["gene"] <= min_gene + max_dist)]
-            if {"ChIl", "ChlB", "ChlN"}.issubset(set(window["target_name"])):
+            min_gene = group.iloc[i]["gene"]
+            window = group[(group["gene"] >= min_gene) & (group["gene"] <= min_gene + max_dist)]
+            if required_genes.issubset(set(window["target_name"])):
                 results.append(window)
         if results:
             return pd.concat(results)
-        return pd.DataFrame(columns=g.columns)
+        return pd.DataFrame(columns=group.columns)
 
-    neighborhood_df = gene_family.groupby("contig", group_keys=False).apply(find_neighborhoods)
+    neighborhood_df = gene_family.groupby("contig", group_keys=False).apply(
+        find_neighborhoods
+    )
 
-    # Subsets
-    chIl = neighborhood_df[neighborhood_df["target_name"] == "ChIl"]
-    chlB = neighborhood_df[neighborhood_df["target_name"] == "ChlB"]
-    chlN = neighborhood_df[neighborhood_df["target_name"] == "ChlN"]
-    logger.debug(chIl)
-    logger.debug(chlB)
-    logger.debug(chlN)
+    # Subsets for each required gene
+    subsets = {gene: neighborhood_df[neighborhood_df["target_name"] == gene]
+               for gene in required_genes}
+    for gene, subset in subsets.items():
+        logger.debug(subset)
 
-    return neighborhood_df
+    # TODO: write files in this function instead of returning
+
+    return neighborhood_df, subsets
 
 
 
 def filter(path: str):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
-    extract_nfix(best_hmm_hits)
-    #logger.debug(x)
+    extract_nfix(best_hmm_hits, GENE_FAMILIES["Chl"])
+    # logger.debug(x)
