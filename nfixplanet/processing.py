@@ -65,7 +65,7 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
 
 def extract_nfix(df: pd.DataFrame, max_dist: int = 10):
     # Filter by score thresholds
-    chl = df[
+    gene_family = df[
         ((df["target_name"] == "ChIl") & (df["full_score"] > 194))
         | ((df["target_name"] == "ChlB") & (df["full_score"] > 67))
         | ((df["target_name"] == "ChlN") & (df["full_score"] > 23))
@@ -73,37 +73,29 @@ def extract_nfix(df: pd.DataFrame, max_dist: int = 10):
 
     # Keep only contigs that have all three target_names
     contigs = (
-        chl.groupby("contig")["target_name"]
-        .apply(lambda x: {"ChIl", "ChlB", "ChlN"}.issubset(set(x)))
+        gene_family.groupby("contig")["target_name"]
+        .transform(lambda x: {"ChIl", "ChlB", "ChlN"}.issubset(set(x)))
     )
-    valid_contigs = contigs[contigs].index
+    gene_family = gene_family[contigs].sort_values(["contig", "gene"])
 
-    # Filter to only those contigs
-    chl = chl[chl["contig"].isin(valid_contigs)].sort_values("gene")
+    # For each contig, find windows of genes that contain all three targets
+    def find_neighborhoods(g):
+        # Expand neighborhoods per contig
+        results = []
+        n = len(g)
+        for i in range(n):
+            # take window up to max_dist on gene coordinate, not index
+            min_gene = g.iloc[i]["gene"]
+            window = g[(g["gene"] >= min_gene) & (g["gene"] <= min_gene + max_dist)]
+            if {"ChIl", "ChlB", "ChlN"}.issubset(set(window["target_name"])):
+                results.append(window)
+        if results:
+            return pd.concat(results)
+        return pd.DataFrame(columns=g.columns)
 
-    targets = ["ChlN", "ChlB", "ChIl"]
-    targets_to_gene = {gene: None for gene in targets}
-    
-    neighborhood_queries = set()
-    for index, row in chl.iterrows():
-        # valid contig
-        if row["query_name"] in neighborhood_queries:
-            continue
-        targets_to_gene[row["target_name"]] = row["gene"]
-        # all target genes not found yet
-        if not all(targets_to_gene.values()):
-            continue
-        max_gene = max(targets_to_gene.values())
-        min_gene = min(targets_to_gene.values())
+    neighborhood_df = gene_family.groupby("contig", group_keys=False).apply(find_neighborhoods)
 
-        if max_gene - min_gene <= max_dist:
-            for gene in targets_to_gene.values():
-                # build the correct query_name
-                neighborhood_queries.add(row["contig"] + "_" + str(gene))
-
-    neighborhood_df = chl[chl["query_name"].isin(neighborhood_queries)]
-
-
+    # Subsets
     chIl = neighborhood_df[neighborhood_df["target_name"] == "ChIl"]
     chlB = neighborhood_df[neighborhood_df["target_name"] == "ChlB"]
     chlN = neighborhood_df[neighborhood_df["target_name"] == "ChlN"]
@@ -111,13 +103,8 @@ def extract_nfix(df: pd.DataFrame, max_dist: int = 10):
     logger.debug(chlB)
     logger.debug(chlN)
 
-    # Final filter
-    return None
+    return neighborhood_df
 
-
-
-def neighborhood():
-    pass
 
 
 def filter(path: str):
