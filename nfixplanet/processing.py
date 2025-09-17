@@ -1,5 +1,8 @@
 import logging
 import pandas as pd
+from dataclasses import dataclass
+
+from typing import TypeAlias
 
 logger = logging.getLogger(__name__)
 
@@ -63,46 +66,71 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-GENE_FAMILIES = {
-    # "Chl": {
-    #     "ChIl": 194,
-    #     "ChlB": 67,
-    #     "ChlN": 23,
-    # }
-    # Core nif
-    "nif" : {
-        "nifD": 583.6,
-        "nifH": 279.5,
-        "nifK": 460,
-    },
-    # nifE and nifN are optional
-    "nifE" : {
-        "nifD": 583.6,
-        "nifH": 279.5,
-        "nifK": 460,
-        "nifE": 504.6,
-    },
-    "nifN" : {
-        "nifD": 583.6,
-        "nifH": 279.5,
-        "nifK": 460,
-        "nifN": 530,
-    },
-}
+@dataclass
+class GeneFamily:
+    name: str
+    required: dict[str, float]
+    alternatives: list[dict[str, float]]
 
-# TODO: add special case for vnf
-def write_filtered_file(df: pd.DataFrame, gene_family: str, gene_to_score: dict[str, int], max_dist: int = 10):
-    # Only keep the required genes that pass the bit score threshold
+
+GENE_FAMILIES = [
+    GeneFamily(
+        name="nif",
+        required={"nifD": 583.6, "nifK": 460.0},
+        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
+    ),
+    # NOTE: nifN and nifE are optional. It was easier to
+    # add them as a different gene fmaily instead of allowing
+    # optional outputs
+    GeneFamily(
+        name="nifE",
+        required={"nifD": 583.6, "nifK": 460.0, "nifE": 504.6},
+        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
+    ),
+    GeneFamily(
+        name="nifN",
+        required={"nifD": 583.6, "nifK": 460.0, "nifN": 530},
+        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
+    ),
+    GeneFamily(
+        name="vnf",
+        required={"vnfD": 933.0, "vnfK": 1151.5},
+        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
+    ),
+]
+
+
+def write_filtered_file(df: pd.DataFrame, gene_family: GeneFamily, max_dist: int = 10):
+    required_genes = gene_family.required
+    alternative_groups = gene_family.alternatives
+
+    # Build filter: any gene in required and at least one in alternatives above threshold
     mask = pd.Series(False, index=df.index)
-    for gene, threshold in gene_to_score.items():
+
+    for gene, threshold in required_genes.items():
         mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+
+    if alternative_groups:
+        for group in alternative_groups:
+            for gene, threshold in group.items():
+                mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+
     gene_family_df = df[mask]
 
-    required_genes = set(gene_to_score.keys())
+    def contains_required_gene_combination(genes: set[str]) -> bool:
+        # all required must be present
+        if not required_genes.keys() <= genes:
+            return False
+        # each alt-group: at least one must be present
+        if alternative_groups:
+            for group in alternative_groups:
+                if genes.isdisjoint(group.keys()):
+                    return False
+        return True
 
     # Only keep contigs that have all n required genes
     contigs = gene_family_df.groupby("contig")["target_name"].transform(
-        lambda x: required_genes.issubset(set(x))
+        lambda x: contains_required_gene_combination(set(x))
     )
     gene_family_df = gene_family_df[contigs].sort_values(["contig", "gene"])
 
@@ -114,8 +142,10 @@ def write_filtered_file(df: pd.DataFrame, gene_family: str, gene_to_score: dict[
         for i in range(n):
             # take window up to max_dist on gene coordinate, not index
             min_gene = group.iloc[i]["gene"]
-            window = group[(group["gene"] >= min_gene) & (group["gene"] <= min_gene + max_dist)]
-            if required_genes.issubset(set(window["target_name"])):
+            window = group[
+                (group["gene"] >= min_gene) & (group["gene"] <= min_gene + max_dist)
+            ]
+            if contains_required_gene_combination(set(window["target_name"])):
                 results.append(window)
         if results:
             return pd.concat(results)
@@ -126,21 +156,29 @@ def write_filtered_file(df: pd.DataFrame, gene_family: str, gene_to_score: dict[
     )
 
     # Subsets for each required gene
-    subsets = {gene: neighborhood_df[neighborhood_df["target_name"] == gene]
-               for gene in required_genes}
+    subsets: dict[str, pd.DataFrame] = {}
+    for gene in required_genes:
+        subsets[gene] = neighborhood_df[neighborhood_df["target_name"] == gene]
+
+    if alternative_groups:
+        for group in alternative_groups:
+            for gene in group:
+                subsets[gene] = neighborhood_df[neighborhood_df["target_name"] == gene]
+
     for gene, subset in subsets.items():
         # Only save nifDKH output without nifEN
-        if gene_family in("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
+        if gene_family.name in ("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
             continue
-        logger.debug(gene)
+        if subset.empty:
+            continue
+        logger.debug(f"family: {gene_family.name}\tgene: {gene}")
         logger.debug(subset)
 
         # TODO: write files in this function
 
 
-
 def filter(path: str):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
-    for gene_family, gene_to_score in GENE_FAMILIES.items():
-        write_filtered_file(best_hmm_hits, gene_family, gene_to_score)
+    for family in GENE_FAMILIES:
+        write_filtered_file(best_hmm_hits, family)
