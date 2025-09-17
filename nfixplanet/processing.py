@@ -1,4 +1,3 @@
-import os
 import logging
 import pandas as pd
 
@@ -147,7 +146,6 @@ def write_tsv(
 def filter_and_write_files(path: str, output_dir: str):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
-    os.makedirs(output_dir, exist_ok=True)
     for family in GENE_FAMILIES:
         genes_to_hits = filter_top_hits_by_genes(best_hmm_hits, family)
         write_tsv(genes_to_hits, family.name, output_dir)
