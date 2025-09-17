@@ -9,7 +9,7 @@ from nfixplanet.config import GENE_FAMILIES
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)
 def test_filter_top_hits_by_genes(gene_family):
     # load hmm_output once from a known test file
-    hmm_path = "out/hmm_out_all.tbl"  # adjust if your test data is elsewhere
+    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_out_all.tbl")
     hmm_output = processing.load_hmm_output(hmm_path)
     best_hits = processing.get_best_hmm_hits(hmm_output)
 
@@ -27,7 +27,7 @@ def test_filter_top_hits_by_genes(gene_family):
         df = df.drop(["contig", "gene"], axis=1)
 
         # path to reference
-        ref_path = os.path.join("tests", "references", f"{gene}.tsv")
+        ref_path = os.path.join("tests", "references", "output", "filter", f"{gene}.tsv")
         assert os.path.exists(ref_path), f"Missing reference file: {ref_path}"
 
         # read reference, no header
