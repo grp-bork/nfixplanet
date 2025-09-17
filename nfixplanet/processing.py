@@ -1,9 +1,8 @@
 import os
 import logging
 import pandas as pd
-from dataclasses import dataclass
 
-from typing import TypeAlias
+from .config import GeneFamily, GENE_FAMILIES
 
 logger = logging.getLogger(__name__)
 
@@ -65,40 +64,6 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
     ].reset_index(drop=True)
 
     return result
-
-
-@dataclass
-class GeneFamily:
-    name: str
-    required: dict[str, float]
-    alternatives: list[dict[str, float]]
-
-
-GENE_FAMILIES = [
-    GeneFamily(
-        name="nif",
-        required={"nifD": 583.6, "nifK": 460.0},
-        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
-    ),
-    # NOTE: nifN and nifE are optional. It was easier to
-    # add them as a different gene fmaily instead of allowing
-    # optional outputs
-    GeneFamily(
-        name="nifE",
-        required={"nifD": 583.6, "nifK": 460.0, "nifE": 504.6},
-        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
-    ),
-    GeneFamily(
-        name="nifN",
-        required={"nifD": 583.6, "nifK": 460.0, "nifN": 530},
-        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
-    ),
-    GeneFamily(
-        name="vnf",
-        required={"vnfD": 933.0, "vnfK": 1151.5},
-        alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
-    ),
-]
 
 
 def filter_top_hits_by_genes(

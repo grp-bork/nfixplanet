@@ -2,3 +2,4 @@ nfixplanet.egg-info
 __pycache__
 slurm/
 01_all_genes.fna
+out/
