@@ -28,10 +28,6 @@ def load_hmm_output(path: str) -> pd.DataFrame:
         "rep",
         "inc",
     ]
-    columns_to_drop = [
-        "accession",
-        "full_accession",
-    ]
     df = pd.read_csv(
         path,
         delim_whitespace=True,
@@ -39,11 +35,8 @@ def load_hmm_output(path: str) -> pd.DataFrame:
         usecols=range(len(column_names)),
         comment="#",
     )
-    df = df.drop(columns=columns_to_drop)
-    ordered_cols = ["query_name"] + [
-        col
-        for col in column_names
-        if col not in columns_to_drop and col != "query_name"
+    ordered_cols = ["query_name", "accession"] + [
+        col for col in column_names if col not in ["query_name", "accession"]
     ]
     df = df[ordered_cols]
     # These columns are needed for filtering and will be removed before the output
@@ -132,7 +125,6 @@ def filter_top_hits_by_genes(
         for group in alternative_groups:
             for gene in group:
                 subsets[gene] = neighborhood_df[neighborhood_df["target_name"] == gene]
-
     return subsets
 
 
