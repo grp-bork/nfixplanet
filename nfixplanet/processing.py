@@ -1,3 +1,4 @@
+import os
 import logging
 import pandas as pd
 from dataclasses import dataclass
@@ -100,7 +101,9 @@ GENE_FAMILIES = [
 ]
 
 
-def write_filtered_file(df: pd.DataFrame, gene_family: GeneFamily, max_dist: int = 10):
+def filter_top_hits_by_genes(
+    df: pd.DataFrame, gene_family: GeneFamily, max_dist: int = 10
+) -> dict[str, pd.DataFrame]:
     required_genes = gene_family.required
     alternative_groups = gene_family.alternatives
 
@@ -165,20 +168,29 @@ def write_filtered_file(df: pd.DataFrame, gene_family: GeneFamily, max_dist: int
             for gene in group:
                 subsets[gene] = neighborhood_df[neighborhood_df["target_name"] == gene]
 
-    for gene, subset in subsets.items():
+    return subsets
+
+
+def write_tsv(
+    genes_to_hits: dict[str, pd.DataFrame], gene_family_name: str, output_dir: str
+):
+    for gene, subset in genes_to_hits.items():
         # Only save nifDKH output without nifEN
-        if gene_family.name in ("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
+        if gene_family_name in ("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
             continue
         if subset.empty:
             continue
-        logger.debug(f"family: {gene_family.name}\tgene: {gene}")
-        logger.debug(subset)
+        # logger.debug(f"family: {gene_family_name}\tgene: {gene}")
+        # logger.debug(subset.head)
+        path = f"{output_dir}/{gene}.tsv"
+        subset = subset.drop(["contig", "gene"], axis=1)
+        subset.to_csv(path, sep="\t", index=False)
 
-        # TODO: write files in this function
 
-
-def filter(path: str):
+def filter_and_write_files(path: str, output_dir: str):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
+    os.makedirs(output_dir, exist_ok=True)
     for family in GENE_FAMILIES:
-        write_filtered_file(best_hmm_hits, family)
+        genes_to_hits = filter_top_hits_by_genes(best_hmm_hits, family)
+        write_tsv(genes_to_hits, family.name, output_dir)
