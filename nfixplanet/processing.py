@@ -96,7 +96,7 @@ def filter_top_hits_by_genes(
     contigs = gene_family_df.groupby("contig")["target_name"].transform(
         lambda x: contains_required_gene_combination(set(x))
     )
-    logger.debug(gene_family_df)
+
     gene_family_df = gene_family_df[contigs].sort_values(["contig", "gene"])
 
     # For each contig, find windows of genes that contain all n required genes
