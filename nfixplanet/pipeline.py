@@ -7,7 +7,7 @@ from . import processing
 logger = logging.getLogger(__name__)
 
 
-def run(input: str, output_dir: str):
+def run(input: str, output_dir: str, hmm_profile_path: str, cpus: int):
     external_tools.check_external_tools()
 
     prodigal_output = f"{output_dir}/prodigal_output.fna"
@@ -16,6 +16,7 @@ def run(input: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
 
     external_tools.prodigal(input, prodigal_output)
-    external_tools.hmmscan(prodigal_output, hmm_output)
+    external_tools.hmmscan(prodigal_output, hmm_output, hmm_profile_path, cpus)
 
     processing.filter_and_write_files(hmm_output, output_dir)
+    logger.info("Pipeline completed")

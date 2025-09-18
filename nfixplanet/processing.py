@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from .config import GeneFamily, GENE_FAMILIES
+from .constants import GeneFamily, GENE_FAMILIES
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +146,7 @@ def write_tsv(
         path = f"{output_dir}/{gene}.tsv"
         subset = subset.drop(["contig", "gene"], axis=1)
         subset.to_csv(path, sep="\t", index=False)
+        logger.info(f"Created file: {path}")
 
 
 def filter_and_write_files(path: str, output_dir: str):
