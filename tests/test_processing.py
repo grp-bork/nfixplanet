@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from nfixplanet import processing
-from nfixplanet.config import GENE_FAMILIES
+from nfixplanet.constants import GENE_FAMILIES
 
 
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)
@@ -15,6 +15,8 @@ def test_filter_top_hits_by_genes(gene_family):
 
     # run filtering
     genes_to_hits = processing.filter_top_hits_by_genes(best_hits, gene_family)
+
+    assert genes_to_hits is not None, "All test data should return hits"
 
     for gene, df in genes_to_hits.items():
         if df.empty:

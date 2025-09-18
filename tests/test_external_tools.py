@@ -1,6 +1,7 @@
 import os
 import filecmp
 import pytest
+from pathlib import Path
 
 from nfixplanet import external_tools
 
@@ -9,8 +10,20 @@ from nfixplanet import external_tools
     "input_file,ref_file",
     [
         (
-            os.path.join("tests", "references", "input", "prodigal", "GCA_001049335.1.genomes_clean.fa"),
-            os.path.join("tests", "references", "output", "prodigal", "GCA_001049335.1.genomes.genes.fna"),
+            os.path.join(
+                "tests",
+                "references",
+                "input",
+                "prodigal",
+                "GCA_001049335.1.genomes_clean.fa",
+            ),
+            os.path.join(
+                "tests",
+                "references",
+                "output",
+                "prodigal",
+                "GCA_001049335.1.genomes.genes.fna",
+            ),
         ),
     ],
 )
@@ -30,15 +43,33 @@ def test_prodigal(tmp_path, input_file, ref_file):
     "input_file,ref_file",
     [
         (
-            os.path.join("tests", "references", "input", "hmmscan", "GCA_001049335.1.genomes_clean.fna"),
-            os.path.join("tests", "references", "output", "hmmscan", "GCA_001049335.1.genomes.genes.tbl"),
+            os.path.join(
+                "tests",
+                "references",
+                "input",
+                "hmmscan",
+                "GCA_001049335.1.genomes_clean.fna",
+            ),
+            os.path.join(
+                "tests",
+                "references",
+                "output",
+                "hmmscan",
+                "GCA_001049335.1.genomes.genes.tbl",
+            ),
         ),
     ],
 )
 def test_hmmscan(tmp_path, input_file, ref_file):
     output_file = tmp_path / "hmm_out_all.tbl"
+    hmm_profile_path = (
+        Path(__file__).parent.parent
+        / "reference_data"
+        / "hmm_profiles"
+        / "nfixplanet_models.hmm"
+    )
 
-    external_tools.hmmscan(str(input_file), str(output_file))
+    external_tools.hmmscan(str(input_file), str(output_file), str(hmm_profile_path), 2)
 
     assert os.path.exists(output_file), "hmmscan did not create output file"
     assert os.path.exists(ref_file), f"Missing reference file: {ref_file}"
