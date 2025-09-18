@@ -60,7 +60,7 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
 
 def filter_top_hits_by_genes(
     df: pd.DataFrame, gene_family: GeneFamily, max_dist: int = 10
-) -> dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame] | None:
     required_genes = gene_family.required
     alternative_groups = gene_family.alternatives
 
@@ -77,6 +77,10 @@ def filter_top_hits_by_genes(
 
     gene_family_df = df[mask]
 
+    if gene_family_df.empty:
+        logger.info(f"No hits found for {gene_family.name}")
+        return None
+
     def contains_required_gene_combination(genes: set[str]) -> bool:
         # all required must be present
         if not required_genes.keys() <= genes:
@@ -92,6 +96,7 @@ def filter_top_hits_by_genes(
     contigs = gene_family_df.groupby("contig")["target_name"].transform(
         lambda x: contains_required_gene_combination(set(x))
     )
+    logger.debug(gene_family_df)
     gene_family_df = gene_family_df[contigs].sort_values(["contig", "gene"])
 
     # For each contig, find windows of genes that contain all n required genes
@@ -148,4 +153,5 @@ def filter_and_write_files(path: str, output_dir: str):
     best_hmm_hits = get_best_hmm_hits(hmm_output)
     for family in GENE_FAMILIES:
         genes_to_hits = filter_top_hits_by_genes(best_hmm_hits, family)
-        write_tsv(genes_to_hits, family.name, output_dir)
+        if genes_to_hits:
+            write_tsv(genes_to_hits, family.name, output_dir)
