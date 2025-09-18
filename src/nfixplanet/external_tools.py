@@ -3,6 +3,8 @@ import subprocess
 import logging
 import sys
 
+from .constants import HMM_PROFILE_PATH
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ def prodigal(input_file: str, out_file: str):
         sys.exit(1)
 
 
-def hmmscan(input_file: str, out_file: str, hmm_profile_path: str, cpus: int):
+def hmmscan(input_file: str, out_file: str, cpus: int):
     """Run hmmscan
 
     Arguments:
@@ -73,7 +75,7 @@ def hmmscan(input_file: str, out_file: str, hmm_profile_path: str, cpus: int):
                 str(cpus),
                 "--tblout",
                 out_file,
-                hmm_profile_path,
+                HMM_PROFILE_PATH,
                 input_file,
             ],
             universal_newlines=True,

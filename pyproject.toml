@@ -11,4 +11,4 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 [project.scripts]
-nfixplanet = "nfixplanet.nfixplanet:main"
+nfixplanet = "nfixplanet.cli:main"

@@ -1,7 +1,6 @@
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from . import pipeline
 
@@ -21,19 +20,6 @@ def parse_args(argv: list[str]):
         help="Path to output directory",
     )
 
-    # resolve default hmm profile inside package
-    default_hmm = (
-        Path(__file__).parent.parent
-        / "reference_data"
-        / "hmm_profiles"
-        / "nfixplanet_models.hmm"
-    )
-    parser.add_argument(
-        "--hmm_profile_path",
-        default=default_hmm,
-        help=f"Path to HMM profile file (default: {default_hmm})",
-    )
-
     parser.add_argument(
         "--cpus",
         type=int,
@@ -49,7 +35,7 @@ def parse_args(argv: list[str]):
         "--version",
         action="version",
         help="Print version number and exit.",
-        version="0.1.0", # TODO: dynamically update version
+        version="0.1.0",  # TODO: dynamically update version
     )
 
     return parser.parse_args(argv)
@@ -72,9 +58,7 @@ def main():
     logger = logging.getLogger(__name__)
     logger.debug(args)
     logger.info("Start pipeline")
-    pipeline.run(
-        args.input_fasta, args.output_directory, args.hmm_profile_path, args.cpus
-    )
+    pipeline.run(args.input_fasta, args.output_directory, args.cpus)
 
 
 if __name__ == "__main__":

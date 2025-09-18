@@ -1,4 +1,8 @@
 from dataclasses import dataclass
+from importlib import resources
+
+DATA_DIR = resources.files("nfixplanet.reference_data.hmm_profiles")
+HMM_PROFILE_PATH = str(DATA_DIR / "nfixplanet_models.hmm")
 
 @dataclass
 class GeneFamily:
