@@ -97,7 +97,7 @@ def filter_top_hits_by_genes(
         lambda x: contains_required_gene_combination(set(x))
     )
 
-    gene_family_df = gene_family_df[contigs].sort_values(["contig", "gene"])
+    gene_family_df = gene_family_df[contigs].sort_values(by=["contig", "gene"])
 
     # For each contig, find windows of genes that contain all n required genes
     def find_neighborhoods(group):
@@ -113,8 +113,12 @@ def filter_top_hits_by_genes(
             if contains_required_gene_combination(set(window["target_name"])):
                 results.append(window)
         if results:
-            return pd.concat(results)
-        return pd.DataFrame(columns=group.columns)
+            # Filter out empty frames first
+            non_empty = [df for df in results if not df.empty]
+            if non_empty:
+                return pd.concat(non_empty)
+        return group.iloc[0:0]  # empty DF with same columns and dtypes
+
 
     neighborhood_df = gene_family_df.groupby("contig", group_keys=False).apply(
         find_neighborhoods
