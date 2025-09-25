@@ -2,3 +2,5 @@ nfixplanet.egg-info
 __pycache__
 slurm/
 out/
+.pytest_cache
+dist/
