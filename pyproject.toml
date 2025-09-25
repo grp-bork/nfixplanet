@@ -6,7 +6,7 @@ build-backend = "uv_build"
 name = "nfixplanet"
 version = "0.1.0"
 description = "Nitrogen Fixer detection pipeline"
-authors = [{name = "Shahriyar Mahdi Robbani", email = "" }]
+authors = [{name = "Shahriyar Mahdi Robbani", email = "shahriyar.robbani@embl.de" }]
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -15,8 +15,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "License :: OSI Approved :: MIT License",
 ]
-license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license = { text = "MIT" }
+license-files = ["LICENSE"]
 
 dependencies = [
     "pandas >=1.3, <2.2",
@@ -29,3 +29,7 @@ nfixplanet = "nfixplanet.cli:main"
 [tool.setuptools.package-data]
 "nfixplanet" = ["reference_data/hmm_profiles/*"]
 
+[project.urls]
+Homepage = "https://github.com/grp-bork/nfixplanet"
+Repository = "https://github.com/grp-bork/nfixplanet"
+Issues = "https://github.com/grp-bork/nfixplanet/issues"
