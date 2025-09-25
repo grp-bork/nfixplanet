@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def run(input: str, output_dir: str, genomic_context_range: int, cpus: int):
+    """Run nitrogen fixer detection pipeline"""
     external_tools.check_external_tools()
 
     prodigal_output = f"{output_dir}/prodigal_output.fna"
