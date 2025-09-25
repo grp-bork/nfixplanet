@@ -59,7 +59,7 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def filter_top_hits_by_genes(
-    df: pd.DataFrame, gene_family: GeneFamily, max_dist: int = 10
+    df: pd.DataFrame, gene_family: GeneFamily, genomic_context_range: int
 ) -> dict[str, pd.DataFrame] | None:
     required_genes = gene_family.required
     alternative_groups = gene_family.alternatives
@@ -108,7 +108,8 @@ def filter_top_hits_by_genes(
             # take window up to max_dist on gene coordinate, not index
             min_gene = group.iloc[i]["gene"]
             window = group[
-                (group["gene"] >= min_gene) & (group["gene"] <= min_gene + max_dist)
+                (group["gene"] >= min_gene)
+                & (group["gene"] <= min_gene + genomic_context_range)
             ]
             if contains_required_gene_combination(set(window["target_name"])):
                 results.append(window)
@@ -118,7 +119,6 @@ def filter_top_hits_by_genes(
             if non_empty:
                 return pd.concat(non_empty)
         return group.iloc[0:0]  # empty DF with same columns and dtypes
-
 
     neighborhood_df = gene_family_df.groupby("contig", group_keys=False).apply(
         find_neighborhoods
@@ -153,10 +153,12 @@ def write_tsv(
         logger.info(f"Created file: {path}")
 
 
-def filter_and_write_files(path: str, output_dir: str):
+def filter_and_write_files(path: str, output_dir: str, genomic_context_range: int):
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
     for family in GENE_FAMILIES:
-        genes_to_hits = filter_top_hits_by_genes(best_hmm_hits, family)
+        genes_to_hits = filter_top_hits_by_genes(
+            best_hmm_hits, family, genomic_context_range
+        )
         if genes_to_hits:
             write_tsv(genes_to_hits, family.name, output_dir)

@@ -1,9 +1,16 @@
 import argparse
 import logging
 import sys
+import tomli
+from pathlib import Path
 
 from . import pipeline
 
+def get_version() -> str:
+    pyproject_path = Path(__file__).parent / "pyproject.toml"
+    with pyproject_path.open("rb") as f:
+        pyproject_data = tomli.load(f)
+    return pyproject_data["project"]["version"]
 
 def parse_args(argv: list[str]):
     parser = argparse.ArgumentParser(
@@ -21,6 +28,13 @@ def parse_args(argv: list[str]):
     )
 
     parser.add_argument(
+        "--genomic_context_range",
+        type=int,
+        default=10,
+        help="Maximum number of genes upstream or downstream to consider for the operon context (default: 10)",
+    )
+
+    parser.add_argument(
         "--cpus",
         type=int,
         default=2,
@@ -35,7 +49,7 @@ def parse_args(argv: list[str]):
         "--version",
         action="version",
         help="Print version number and exit.",
-        version="0.1.0",  # TODO: dynamically update version
+        version=get_version(),
     )
 
     return parser.parse_args(argv)
@@ -58,7 +72,9 @@ def main():
     logger = logging.getLogger(__name__)
     logger.debug(args)
     logger.info("Start pipeline")
-    pipeline.run(args.input_fasta, args.output_directory, args.cpus)
+    pipeline.run(
+        args.input_fasta, args.output_directory, args.genomic_context_range, args.cpus
+    )
 
 
 if __name__ == "__main__":
