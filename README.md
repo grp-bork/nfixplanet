@@ -14,7 +14,8 @@ TODO: install via conda
 ```
 git clone git@git.embl.org:grp-bork/nfixplanet.git
 cd nfixplanet
-conda create -n nfixtest
+conda create -n nfixtest python=3.10
+conda activate nfixtest
 conda install prodigal hmmer
 pip install -e .
 ```
