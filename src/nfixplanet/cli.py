@@ -1,15 +1,15 @@
 import argparse
 import logging
 import sys
-import tomli
+import tomllib
 from pathlib import Path
 
 from . import pipeline
 
 def get_version() -> str:
-    pyproject_path = Path(__file__).parent / "pyproject.toml"
+    pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
     with pyproject_path.open("rb") as f:
-        pyproject_data = tomli.load(f)
+        pyproject_data = tomllib.load(f)
     return pyproject_data["project"]["version"]
 
 def parse_args(argv: list[str]):
@@ -20,11 +20,13 @@ def parse_args(argv: list[str]):
     parser.add_argument(
         "--input_fasta",
         help="Path to input fasta file (can be gzipped)",
+        required=True,
     )
 
     parser.add_argument(
         "--output_directory",
         help="Path to output directory",
+        required=True,
     )
 
     parser.add_argument(

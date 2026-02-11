@@ -14,7 +14,7 @@ def test_filter_top_hits_by_genes(gene_family):
     best_hits = processing.get_best_hmm_hits(hmm_output)
 
     # run filtering
-    genes_to_hits = processing.filter_top_hits_by_genes(best_hits, gene_family)
+    genes_to_hits = processing.filter_top_hits_by_genes(best_hits, gene_family, genomic_context_range=10)
 
     assert genes_to_hits is not None, "All test data should return hits"
 
