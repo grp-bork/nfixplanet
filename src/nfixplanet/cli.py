@@ -6,21 +6,35 @@ from pathlib import Path
 
 from . import pipeline
 
+
 def get_version() -> str:
     pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
     with pyproject_path.open("rb") as f:
         pyproject_data = tomllib.load(f)
     return pyproject_data["project"]["version"]
 
-def parse_args(argv: list[str]):
+
+def get_parser():
     parser = argparse.ArgumentParser(
         description="A pipeline for the detection of nitrogen fixers.\n"
     )
 
     parser.add_argument(
-        "--input_fasta",
-        help="Path to input fasta file (can be gzipped)",
-        required=True,
+        "--input_genomes",
+        help="Path to input genom fasta file (can be gzipped)",
+        default="",
+    )
+
+    parser.add_argument(
+        "--input_orfs",
+        help="Path to input ORF fasta file (Prodigal output)",
+        default="",
+    )
+
+    parser.add_argument(
+        "--input_hmms",
+        help="Path to HMM tables (HMMER output)",
+        default="",
     )
 
     parser.add_argument(
@@ -54,11 +68,12 @@ def parse_args(argv: list[str]):
         version=get_version(),
     )
 
-    return parser.parse_args(argv)
+    return parser
 
 
 def main():
-    args = parse_args(sys.argv[1:])
+    parser = get_parser()
+    args = parser.parse_args(sys.argv[1:])
     if args.verbose:
         logging.basicConfig(
             format="%(asctime)s : [%(levelname)7s] : %(name)s:%(lineno)s %(funcName)20s() : %(message)s",
@@ -73,9 +88,20 @@ def main():
         )
     logger = logging.getLogger(__name__)
     logger.debug(args)
+
+    if not (args.input_genomes or args.input_orfs or args.input_hmms):
+        parser.error(
+            "At least one of --input_genomes, --input_orfs, or --input_hmms must be provided"
+        )
+
     logger.info("Start pipeline")
     pipeline.run(
-        args.input_fasta, args.output_directory, args.genomic_context_range, args.cpus
+        args.input_genomes,
+        args.input_orfs,
+        args.input_hmms,
+        args.output_directory,
+        args.genomic_context_range,
+        args.cpus,
     )
 
 
