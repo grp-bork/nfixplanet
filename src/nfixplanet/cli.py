@@ -4,7 +4,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from . import pipeline
+from . import pipeline, utils
 
 
 def get_version() -> str:
@@ -16,49 +16,7 @@ def get_version() -> str:
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        description="A pipeline for the detection of nitrogen fixers.\n"
-    )
-
-    parser.add_argument(
-        "--input_genomes",
-        help="Path to input genom fasta file (can be gzipped)",
-        default="",
-    )
-
-    parser.add_argument(
-        "--input_orfs",
-        help="Path to input ORF fasta file (Prodigal output)",
-        default="",
-    )
-
-    parser.add_argument(
-        "--input_hmms",
-        help="Path to HMM tables (HMMER output)",
-        default="",
-    )
-
-    parser.add_argument(
-        "--output_directory",
-        help="Path to output directory",
-        required=True,
-    )
-
-    parser.add_argument(
-        "--genomic_context_range",
-        type=int,
-        default=10,
-        help="Maximum number of genes upstream or downstream to consider for the operon context (default: 10)",
-    )
-
-    parser.add_argument(
-        "--cpus",
-        type=int,
-        default=2,
-        help="Number of CPUs to use for HMMscan (default: 2, max recommended: 4)",
-    )
-
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose (DEBUG) logging"
+        description="A pipeline for the detection of nitrogen fixers."
     )
 
     parser.add_argument(
@@ -68,34 +26,96 @@ def get_parser():
         version=get_version(),
     )
 
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # -------------------
+    # annotate subcommand
+    # -------------------
+    annotate_parser = subparsers.add_parser(
+        "annotate",
+        help="Run annotation pipeline",
+    )
+
+    annotate_parser.add_argument(
+        "--input_genomes",
+        help="Path to input genom fasta file (can be gzipped)",
+        default="",
+    )
+    annotate_parser.add_argument(
+        "--input_orfs",
+        help="Path to input ORF fasta file (Prodigal output)",
+        default="",
+    )
+
+    annotate_parser.add_argument(
+        "--input_hmms",
+        help="Path to HMM tables (HMMER output)",
+        default="",
+    )
+
+    annotate_parser.add_argument(
+        "--output_directory",
+        required=True,
+        help="Path to output directory",
+    )
+
+    annotate_parser.add_argument(
+        "--genomic_context_range",
+        type=int,
+        default=10,
+        help="Maximum number of genes upstream or downstream to consider for the operon context (default: 10)",
+    )
+
+    annotate_parser.add_argument(
+        "--cpus",
+        type=int,
+        default=2,
+        help="Number of CPUs to use for HMMscan (default: 2, max recommended: 4)",
+    )
+
+    annotate_parser.add_argument(
+        "--verbose",
+        action="store_true",
+    )
+
+    annotate_parser.set_defaults(func=run_annotate_command)
+
+    # ---------------
+    # map subcommand
+    # ---------------
+    map_parser = subparsers.add_parser(
+        "map",
+        help="Run mapping pipeline",
+    )
+
+    map_parser.add_argument(
+        "--output_directory",
+        required=True,
+    )
+
+    map_parser.add_argument(
+        "--verbose",
+        action="store_true",
+    )
+
+    map_parser.set_defaults(func=run_map_command)
+
     return parser
 
 
-def main():
-    parser = get_parser()
-    args = parser.parse_args(sys.argv[1:])
-    if args.verbose:
-        logging.basicConfig(
-            format="%(asctime)s : [%(levelname)7s] : %(name)s:%(lineno)s %(funcName)20s() : %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.DEBUG,
-        )
-    else:
-        logging.basicConfig(
-            format="[%(asctime)s] %(levelname)s: %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.INFO,
-        )
+def run_annotate_command(args):
+    utils.configure_logging(args.verbose)
     logger = logging.getLogger(__name__)
     logger.debug(args)
 
     if not (args.input_genomes or args.input_orfs or args.input_hmms):
-        parser.error(
+        raise SystemExit(
             "At least one of --input_genomes, --input_orfs, or --input_hmms must be provided"
         )
 
-    logger.info("Start pipeline")
-    pipeline.run(
+    logger.info("Start annotation pipeline")
+
+    pipeline.run_annotate(
         args.input_genomes,
         args.input_orfs,
         args.input_hmms,
@@ -103,6 +123,21 @@ def main():
         args.genomic_context_range,
         args.cpus,
     )
+
+
+def run_map_command(args):
+    utils.configure_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    logger.info("Start mapping pipeline")
+
+    pipeline.run_map()
+
+
+def main():
+    parser = get_parser()
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":

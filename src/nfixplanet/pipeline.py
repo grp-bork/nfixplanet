@@ -7,7 +7,7 @@ from . import processing
 logger = logging.getLogger(__name__)
 
 
-def run(
+def run_annotate(
     input_genome: str,
     input_orf: str,
     input_hmm: str,
@@ -38,3 +38,15 @@ def run(
 
     processing.filter_and_write_files(hmm_path, output_dir, genomic_context_range)
     logger.info("Pipeline completed")
+
+
+def run_map():
+    # run fastp
+    # run hostile
+    # hostile index
+    # hostile clean
+    # run minimap
+    # minimap index
+    # run coverm
+    # run lucas R scripts
+    pass
