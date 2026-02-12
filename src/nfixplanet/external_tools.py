@@ -73,6 +73,7 @@ def hmmscan(input_file: str, out_file: str, cpus: int):
                 "hmmscan",
                 "--cpu",
                 str(cpus),
+                "--cut_ga",
                 "--tblout",
                 out_file,
                 HMM_PROFILE_PATH,
