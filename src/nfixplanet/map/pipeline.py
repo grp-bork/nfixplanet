@@ -21,9 +21,9 @@ def run_map(
     cpus: int = 4,
 ):
     """
-    Equivalent of:
-        preprocess_fastqs -> clean_fastq -> coverm
+    preprocess_fastqs -> clean_fastq -> coverm
     """
+    #TODO: if not reference/index build them
 
     tmp_dir = work_dir if work_dir else f"tmp_{sample_id}"
     ensure_dir(tmp_dir)
@@ -105,9 +105,7 @@ def run_map(
 
 
 def build_minimap_index(reference_fasta: str, cpus: int = 4) -> str:
-    """
-    Equivalent of minimap_index process.
-    """
+    # TODO: provide option for reference file
     tools.check_files_exist([reference_fasta])
     index_path = f"{Path(reference_fasta).stem}.mmi"
     tools.minimap2_index(reference_fasta, index_path, cpus)
@@ -115,7 +113,5 @@ def build_minimap_index(reference_fasta: str, cpus: int = 4) -> str:
 
 
 def build_hostile_index():
-    """
-    Equivalent of hostile_index process.
-    """
+    # TODO: provide option for index?
     tools.hostile_index_fetch()
