@@ -88,8 +88,34 @@ def get_parser():
     )
 
     map_parser.add_argument(
+        "--read_1",
+        type=str,
+        help="Path to FASTA/FASTQ file for paired-end read 1 (R1).",
+    )
+
+    map_parser.add_argument(
+        "--read_2",
+        type=str,
+        help="Path to FASTA/FASTQ file for paired-end read 2 (R2). Must be provided with --read_1.",
+    )
+
+    map_parser.add_argument(
+        "--single",
+        type=str,
+        help="Path to FASTA/FASTQ file for single-end reads. Mutually exclusive with --read_1/--read_2.",
+    )
+
+    map_parser.add_argument(
         "--output_directory",
+        type=str,
         required=True,
+        help="Path to output directory",
+    )
+
+    map_parser.add_argument(
+        "--work_directory",
+        type=str,
+        help="Path to directory for temporary files",
     )
 
     map_parser.add_argument(
@@ -128,9 +154,20 @@ def run_map_command(args):
     utils.configure_logging(args.verbose)
     logger = logging.getLogger(__name__)
 
+    r1 = args.read_1
+    r2 = args.read_2
+    s = args.single
+
+    paired = r1 and r2
+
+    if not s and not paired:
+        raise SystemError(
+            "At least either --read_1 and --read_2 must be provided or --single must be provided"
+        )
+
     logger.info("Start mapping pipeline")
 
-    pipeline.run_map()
+    pipeline.run_map(r1, r2, s, args.work_directory)
 
 
 def main():

@@ -87,6 +87,66 @@ def hmmscan(input_file: str, out_file: str, cpus: int):
         sys.exit(1)
 
 
+def fastp_paired(r1_in: str, r2_in: str, r1_out: str, r2_out: str, cpus: int):
+    logger.info("Running fastp (paired)...")
+    try:
+        subprocess.check_output(
+            [
+                "fastp",
+                "--thread",
+                str(cpus),
+                "--in1",
+                r1_in,
+                "--in2",
+                r2_in,
+                "--out1",
+                r1_out,
+                "--out2",
+                r2_out,
+                "--length_required 45",
+                "--cut_front",
+                "--cut_tail",
+                "--cut_window_size",
+                "4",
+                "--cut_mean_quality",
+                "20",
+            ],
+            universal_newlines=True,
+        )
+        logger.info("Hmmscan completed")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to run hmmscan on {r1_in} & {r2_in}: {e}")
+        sys.exit(1)
+
+
+def fastp_single(s_in: str, s_out: str, cpus: int):
+    logger.info("Running fastp (single)...")
+    try:
+        subprocess.check_output(
+            [
+                "fastp",
+                "--thread",
+                str(cpus),
+                "--in1",
+                s_in,
+                "--out1",
+                s_out,
+                "--length_required 45",
+                "--cut_front",
+                "--cut_tail",
+                "--cut_window_size",
+                "4",
+                "--cut_mean_quality",
+                "20",
+            ],
+            universal_newlines=True,
+        )
+        logger.info("Hmmscan completed")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to run hmmscan on {s_in} & {s_out}: {e}")
+        sys.exit(1)
+
+
 def check_if_tool_exists(tool_name: str) -> bool:
     """Check if tool is available."""
     return shutil.which(tool_name) is not None
@@ -94,16 +154,15 @@ def check_if_tool_exists(tool_name: str) -> bool:
 
 def check_external_tools():
     """Checks if tool dependencies are available."""
-    if not check_if_tool_exists("prodigal"):
-        logger.error("Prodigal not found.")
-        sys.exit(1)
-    if not check_if_tool_exists("hmmscan"):
-        logger.error("Hmmscan not found.")
-        sys.exit(1)
-    # if not external_tools.check_if_tool_exists("grep"):
-    #     logger.error("grep not found.")
-    #     sys.exit(1)
-    if not check_if_tool_exists("zcat"):
-        logger.error("zcat not found.")
-        sys.exit(1)
+    required_tools = [
+        "prodigal",
+        "hmmscan",
+        "zcat",
+        "fastp",
+    ]
+    for tool in required_tools:
+        if not check_external_tools(tool):
+            logger.error(f"{tool} not found.")
+            exit(1)
+
     logger.info("All required software found")

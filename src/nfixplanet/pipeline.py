@@ -3,6 +3,7 @@ import logging
 
 from . import external_tools
 from . import processing
+from . import utils
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,16 @@ def run_annotate(
     logger.info("Pipeline completed")
 
 
-def run_map():
+def run_map(r1: str, r2: str, s: str, work_dir: str | None = None):
+    tmp_dir = work_dir if work_dir else "tmp"
+    os.mkdir(tmp_dir)
+
+    if r1 and r2:
+        utils.check_files_exist([r1, r2])
+        external_tools.fastp_paired(r1, r2, f"{tmp_dir}/r1.fq", f"{tmp_dir}/r2.fq")
+
+    if s:
+        pass
     # run fastp
     # run hostile
     # hostile index
