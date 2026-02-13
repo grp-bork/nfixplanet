@@ -2,7 +2,7 @@ import os
 import filecmp
 import pytest
 
-from nfixplanet import external_tools
+from nfixplanet.annotate import tools
 
 
 @pytest.mark.parametrize(
@@ -29,7 +29,7 @@ from nfixplanet import external_tools
 def test_hmmscan(tmp_path, input_file, ref_file):
     output_file = tmp_path / "hmm_out_all.tbl"
 
-    external_tools.hmmscan(str(input_file), str(output_file), 2)
+    tools.hmmscan(str(input_file), str(output_file), 2)
 
     assert os.path.exists(output_file), "hmmscan did not create output file"
     assert os.path.exists(ref_file), f"Missing reference file: {ref_file}"
@@ -68,7 +68,7 @@ def test_hmmscan(tmp_path, input_file, ref_file):
 def test_prodigal(tmp_path, input_file, ref_file):
     output_file = tmp_path / "prodigal_out.fna"
 
-    external_tools.prodigal(str(input_file), str(output_file))
+    tools.prodigal(str(input_file), str(output_file))
 
     assert os.path.exists(output_file), "Prodigal did not create output file"
     assert os.path.exists(ref_file), f"Missing reference file: {ref_file}"

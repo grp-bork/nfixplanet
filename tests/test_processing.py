@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import pytest
 
-from nfixplanet import processing
-from nfixplanet.constants import GENE_FAMILIES
+from nfixplanet.annotate import processing
+from nfixplanet.annotate.constants import GENE_FAMILIES
 
 
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)

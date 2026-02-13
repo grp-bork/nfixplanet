@@ -3,7 +3,10 @@ import logging
 import tomllib
 from pathlib import Path
 
-from . import pipeline, utils
+from .annotate.pipeline import run_annotate
+from .map.pipeline import run_map
+
+from . import utils
 
 
 def get_version() -> str:
@@ -140,7 +143,7 @@ def run_annotate_command(args):
 
     logger.info("Start annotation pipeline")
 
-    pipeline.run_annotate(
+    run_annotate(
         args.input_genomes,
         args.input_orfs,
         args.input_hmms,
@@ -167,7 +170,7 @@ def run_map_command(args):
 
     logger.info("Start mapping pipeline")
 
-    pipeline.run_map(r1, r2, s, args.work_directory)
+    run_map(r1, r2, s, args.work_directory)
 
 
 def main():
