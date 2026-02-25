@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import pytest
 
-from nfixplanet import processing
+from nfixplanet.annotate import processing
 from nfixplanet.constants import GENE_FAMILIES
 
 
