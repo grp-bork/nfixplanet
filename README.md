@@ -4,7 +4,7 @@ Python package for detection and quantification of nitrogen-fixing microorganism
 
 ## Description
 
-NFixPlanet provides workflows for identifying nitrogen fixation genes in genomes and quantifying the abundance and taxonomic composition of diazotrophs in metagenomic datasets. It combines profile Hidden Markov Model (HMM) annotation, genomic context validation, and coverage-based abundance estimation using a curated diazotroph reference database.
+NFixPlanet provides workflows for identifying nitrogen fixation genes in genomes/contigs and quantifying the abundance and taxonomic composition of diazotrophs in metagenomic datasets. It combines profile Hidden Markov Model (HMM) annotation, genomic context validation, and coverage-based abundance estimation using a curated diazotroph reference database.
 
 The package contains two main workflows:
 - **Genome annotation** (`annotate`) — identifies nitrogen fixation genes and operons in genome assemblies using HMMs and genomic context filtering.
@@ -54,15 +54,14 @@ Pipeline for identifying nitrogen fixation genes and operons in genome assemblie
 This workflow:
 1. Predicts open reading frames (ORFs) using Prodigal (optional if ORFs are provided)
 2. Searches ORFs against curated nitrogen fixation HMM profiles using HMMER
-3. Applies model-specific GA score thresholds
-4. Retains the best HMM hit per ORF
-5. Filters results to ensure required genes occur on the same contig
-6. Performs genomic context validation based on operon structure and gene proximity
-7. Resolves ambiguous gene assignments (e.g., nifH vs vnfH) using neighboring genes
+3. Retains the best HMM hit per ORF
+4. Filters results to ensure required genes occur on the same contig
+5. Performs genomic context validation based on operon structure and gene proximity
+6. Resolves ambiguous gene assignments (e.g., nifH vs vnfH) using neighboring genes
 
 Output consists of high-confidence nitrogen fixation gene annotations and operon assignments.
 
-This workflow is designed for genome assemblies and metagenome-assembled genomes (MAGs).
+This workflow is designed for any nucleotide sequence including genome assemblies, metagenome-assembled genomes (MAGs), or individual contigs.
 
 Basic command:
 
@@ -82,12 +81,13 @@ Pipeline for quantifying diazotroph gene, genome, and taxonomic abundance from s
 This workflow integrates read mapping, abundance estimation, and taxonomic profiling into a single pipeline.
 
 Steps include:
-1. Mapping metagenomic reads to a curated diazotroph reference gene database using CoverM
-2. Calculating coverage per gene across samples
-3. Aggregating gene coverage into genome-level abundance estimates
-4. Normalizing genome abundance by gene count per genome
-5. Assigning genomes to taxonomy using a reference taxonomy table
-6. Aggregating genome abundance into taxonomic relative abundance profiles
+1. Pre-processing quality control on metagenomic reads
+2. Mapping metagenomic reads to a curated diazotroph reference gene database using CoverM
+3. Calculating coverage per gene across samples
+4. Aggregating gene coverage into genome-level abundance estimates
+5. Normalizing genome abundance by gene count per genome
+6. Assigning genomes to taxonomy using a reference taxonomy table
+7. Aggregating genome abundance into taxonomic relative abundance profiles
 
 Outputs include:
 1. Gene abundance table (coverage per nitrogen fixation gene per sample)
@@ -123,7 +123,7 @@ Optional arguments:
 
 ## Authors and acknowledgment
 - [Mahdi Robbani](https://github.com/mahdi-robbani)
-- Lucas Ustick
+- [Lucas Ustick](https://github.com/ljustick)
 - [Anthony Fullam](https://github.com/fullama)
 
 ## License
