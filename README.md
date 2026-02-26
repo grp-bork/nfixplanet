@@ -99,7 +99,7 @@ These outputs provide both functional and taxonomic quantification of diazotroph
 Basic command:
 
 ```bash
-nfixplanet map \
+nfixplanet profile \
   --sample_id SAMPLE_NAME \
   --read_1 /path/to/read_1.fastq \
   --read_2 /path/to/read_2.fastq \
