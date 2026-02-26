@@ -1,14 +1,19 @@
 # NFixPlanet
 
-Python package for detection of nitrogen fixers.
+Python package for detection and quantification of nitrogen-fixing microorganisms (diazotrophs) from genomes and short-read metagenomes.
 
 ## Description
-TODO: need to update description
-TODO: mention somewhere that the pipeline only works for short read sequences (coverm step)
+
+NFixPlanet provides workflows for identifying nitrogen fixation genes in genomes and quantifying the abundance and taxonomic composition of diazotrophs in metagenomic datasets. It combines profile Hidden Markov Model (HMM) annotation, genomic context validation, and coverage-based abundance estimation using a curated diazotroph reference database.
+
+The package contains two main workflows:
+- **Genome annotation** (`annotate`) — identifies nitrogen fixation genes and operons in genome assemblies using HMMs and genomic context filtering.
+- **Metagenome quantification** (`profile`) — maps short reads to a diazotroph reference database and computes gene abundance, genome abundance, and taxonomic relative abundance.
+
+The metagenome workflow currently supports short-read sequencing data only, as abundance estimation relies on short-read coverage profiling.
 
 ## Installation
-TODO: install via conda
-The recommended method of installation is via [bioconda](TODO: add to conda package)
+The recommended method of installation is via [bioconda](https://anaconda.org/channels/bioconda/packages/nfixplanet/overview)
 ```bash
 conda install -c bioconda nfixplanet
 ```
@@ -44,7 +49,20 @@ pip install -e .[dev]
 ## Usage
 ### nfixplanet annotate
 
-Pipeline for annotating genomes as N-fixers TODO: update description
+Pipeline for identifying nitrogen fixation genes and operons in genome assemblies.
+
+This workflow:
+1. Predicts open reading frames (ORFs) using Prodigal (optional if ORFs are provided)
+2. Searches ORFs against curated nitrogen fixation HMM profiles using HMMER
+3. Applies model-specific GA score thresholds
+4. Retains the best HMM hit per ORF
+5. Filters results to ensure required genes occur on the same contig
+6. Performs genomic context validation based on operon structure and gene proximity
+7. Resolves ambiguous gene assignments (e.g., nifH vs vnfH) using neighboring genes
+
+Output consists of high-confidence nitrogen fixation gene annotations and operon assignments.
+
+This workflow is designed for genome assemblies and metagenome-assembled genomes (MAGs).
 
 Basic command:
 
@@ -58,8 +76,25 @@ Optional arguments:
 - `--verbose`: Enable verbose (DEBUG) logging.
 - `--version`: Print version number and exit.
 
-### nfixplanet map
-Pipeline for mapping metagenomes TODO: update description
+### nfixplanet profile
+Pipeline for quantifying diazotroph gene, genome, and taxonomic abundance from short-read metagenomes.
+
+This workflow integrates read mapping, abundance estimation, and taxonomic profiling into a single pipeline.
+
+Steps include:
+1. Mapping metagenomic reads to a curated diazotroph reference gene database using CoverM
+2. Calculating coverage per gene across samples
+3. Aggregating gene coverage into genome-level abundance estimates
+4. Normalizing genome abundance by gene count per genome
+5. Assigning genomes to taxonomy using a reference taxonomy table
+6. Aggregating genome abundance into taxonomic relative abundance profiles
+
+Outputs include:
+1. Gene abundance table (coverage per nitrogen fixation gene per sample)
+2. Genome abundance table (normalized coverage per diazotroph genome per sample)
+3. Taxonomic relative abundance tables at multiple taxonomic levels (e.g., phylum, class, order, family, genus)
+
+These outputs provide both functional and taxonomic quantification of diazotroph communities across metagenomic samples.
 
 Basic command:
 
