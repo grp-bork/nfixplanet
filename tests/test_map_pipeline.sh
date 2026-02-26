@@ -6,4 +6,4 @@ nfixplanet map --read_1 tests/references/input/map_pipeline/SRR5371433.pair.1.fq
                --sample_id SAMN06117828 \
                --work_directory tmp \
                --output_directory tmp
-diff -s tmp/SAMN06117828_sample_coverage.tsv tests/references/output/map_pipeline/SAMN06117828_sample_coverage.tsv
+diff -s tmp/SAMN06117828_coverage.tsv tests/references/output/map_pipeline/SAMN06117828_coverage.tsv

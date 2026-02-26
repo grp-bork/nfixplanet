@@ -3,7 +3,8 @@ import shutil
 import logging
 from pathlib import Path
 
-from nfixplanet.map import tools
+from nfixplanet.profile import tools
+from nfixplanet.profile import processing
 from nfixplanet import utils
 from nfixplanet.constants import (
     MAP_TOOLS,
@@ -20,7 +21,7 @@ def ensure_dir(path: str):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def run_map(
+def run_profile(
     sample_id: str,
     r1: str | None,
     r2: str | None,
@@ -152,15 +153,26 @@ def run_map(
     # --------------------
     # COVERM
     # --------------------
-    output_file = f"{output_dir}/{sample_id}_sample_coverage.tsv"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    coverage_file = f"{output_dir}/{sample_id}_coverage.tsv"
 
     tools.coverm_contig(
         r1=cleaned_r1,
         r2=cleaned_r2,
         single=cleaned_s,
         reference_index=str(REFERENCE_INDEX_NAME),
-        output_file=output_file,
+        output_file=coverage_file,
         cpus=cpus,
     )
 
-    logger.info(f"Finished sample {sample_id}")
+    # --------------------
+    # Process results
+    # --------------------
+    gene_file = f"{output_dir}/{sample_id}_gene_table.tsv"
+    otu_file = f"{output_dir}/{sample_id}_OTU_table.tsv"
+    processing.annotate_mapping_results(coverage_file, gene_file, otu_file)
+    processing.profile_results(otu_file, output_dir)
+
+    logger.info(f"Finished calculating coverage score for sample {sample_id}")
+
+

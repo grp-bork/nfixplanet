@@ -9,10 +9,6 @@ from nfixplanet.constants import (
 )
 
 
-def load_reference(reference_path: str) -> pd.DataFrame:
-    return pd.read_csv(reference_path, sep="\t")
-
-
 def load_otu_table(sample_path: str) -> pd.DataFrame:
     df = pd.read_csv(sample_path, sep="\t")
 
@@ -32,42 +28,25 @@ def load_otu_table(sample_path: str) -> pd.DataFrame:
 
 
 def extract_sample_name(path: str) -> str:
-    match = re.search(r"(.*?)_sample_coverage\.tsv", Path(path).name)
+    match = re.search(r"(.*?)_coverage\.tsv", Path(path).name)
     if not match:
         raise ValueError("Could not extract sample name")
     return match.group(1)
 
 
-def merge_with_annotation(
-    reference_df: pd.DataFrame, otu_df: pd.DataFrame
-) -> pd.DataFrame:
-    return reference_df.merge(otu_df, left_on="map_id", right_on="Contig", how="inner")
-
-
-def compute_gene_level(merged_df: pd.DataFrame, sample_name: str) -> pd.DataFrame:
-    gene_result = (
-        merged_df.groupby("annotation", as_index=False)["Mean"]
-        .sum()
-        .rename(columns={"Mean": sample_name})
-    )
-    return gene_result
-
-
 def compute_target_otu_table(merged_df: pd.DataFrame, sample_name: str) -> pd.DataFrame:
+    """Filter merged data to target annotations and rename Mean column to sample name."""
     subset = merged_df[merged_df["annotation"].isin(TARGET_ANNOTATIONS)]
-    otu_result = subset[["map_id", "annotation", "Mean"]].copy()
-    otu_result.rename(columns={"Mean": sample_name}, inplace=True)
-    return otu_result
+    otu_table = subset[["map_id", "annotation", "Mean"]].copy()
+    otu_table.rename(columns={"Mean": sample_name}, inplace=True)
+    return otu_table
 
 
 def compute_genome_normalized_table(
     reference_df: pd.DataFrame, otu_df: pd.DataFrame
 ) -> pd.DataFrame:
     """
-    Equivalent of:
-    - merge genome_contig
-    - sum per genome
-    - divide by gene count per genome
+    Compute genome-level normalized abundances by averaging values across genes per genome_contig.
     """
 
     # attach genome_contig
@@ -100,33 +79,31 @@ def compute_genome_normalized_table(
     return normalized
 
 
-def annotate_mapping_results(sample_file: str, output_dir: str):
+def annotate_mapping_results(coverage_file: str, gene_file: str, otu_file: str):
+    """Process coverage data to generate gene-level and genome-normalized OTU tables."""
+    reference_df = pd.read_csv(MAPPING_REFERENCE, sep="\t")
+    otu_df = load_otu_table(coverage_file)
 
-    reference_df = load_reference(MAPPING_REFERENCE)
-    otu_df = load_otu_table(sample_file)
+    sample_name = extract_sample_name(coverage_file)
 
-    sample_name = extract_sample_name(sample_file)
-
-    merged_df = merge_with_annotation(reference_df, otu_df)
-
-    gene_result = compute_gene_level(merged_df, sample_name)
-    otu_result = compute_target_otu_table(merged_df, sample_name)
-    otu_normalized = compute_genome_normalized_table(reference_df, otu_result)
-
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    gene_result.to_csv(
-        output_path / "gene_final.tsv", sep="\t", index=False, float_format="%.15g"
+    # merge with annotation
+    merged_df = reference_df.merge(
+        otu_df, left_on="map_id", right_on="Contig", how="inner"
     )
 
-    otu_result.to_csv(
-        output_path / "nifDK_final.tsv", sep="\t", index=False, float_format="%.15g"
+    # Aggregate Mean coverage values by annotation and label column with sample name
+    gene_result = (
+        merged_df.groupby("annotation", as_index=False)["Mean"]
+        .sum()
+        .rename(columns={"Mean": sample_name})
     )
 
-    otu_normalized.to_csv(
-        output_path / "OTU_final.tsv", sep="\t", index=False, float_format="%.15g"
-    )
+    otu_table = compute_target_otu_table(merged_df, sample_name)
+    otu_normalized = compute_genome_normalized_table(reference_df, otu_table)
+
+    gene_result.to_csv(gene_file, sep="\t", index=False, float_format="%.15g")
+
+    otu_normalized.to_csv(otu_file, sep="\t", index=False, float_format="%.15g")
 
 
 def sum_otu_by_group(
@@ -136,6 +113,7 @@ def sum_otu_by_group(
     output_dir: str,
     out_prefix: str = "OTU_group_summed",
 ):
+    """Sum OTU abundance values grouped by a specified taxonomy column and write to file."""
     tax_map = tax_df[["genome_contig", group_col]]
     merged = otu_df.merge(tax_map, on="genome_contig", how="inner")
 
@@ -148,11 +126,10 @@ def sum_otu_by_group(
 
 
 def profile_results(otu_path: str, output_dir: str):
+    """Generate taxonomy-level OTU summaries for standard taxonomic ranks."""
     # Stop autoconverting "" to "NaN"
     tax_df = pd.read_csv(TAXONOMY_REFERENCE, sep="\t", keep_default_na=False)
     otu_df = pd.read_csv(otu_path, sep="\t")
-
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     for rank in ["d", "p", "c", "o", "f", "g", "s"]:
         sum_otu_by_group(rank, otu_df, tax_df, output_dir)

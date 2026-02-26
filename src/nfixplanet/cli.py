@@ -3,7 +3,7 @@ import logging
 from importlib.metadata import version
 
 from nfixplanet.annotate.pipeline import run_annotate
-from nfixplanet.map.pipeline import run_map
+from nfixplanet.profile.pipeline import run_profile
 from nfixplanet import utils
 
 
@@ -80,63 +80,63 @@ def get_parser():
     # ---------------
     # map subcommand
     # ---------------
-    map_parser = subparsers.add_parser(
+    profile_parser = subparsers.add_parser(
         "map",
-        help="Run mapping pipeline",
+        help="Run profiling pipeline",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--sample_id",
         type=str,
         required=True,
         help="Name of FASTA/FASTQ sample",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--read_1",
         type=str,
         help="Path to FASTA/FASTQ file for paired-end read 1 (R1).",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--read_2",
         type=str,
         help="Path to FASTA/FASTQ file for paired-end read 2 (R2). Must be provided with --read_1.",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--single",
         type=str,
         help="Path to FASTA/FASTQ file for single-end reads.",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--output_directory",
         type=str,
         required=True,
         help="Path to output directory",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--work_directory",
         type=str,
         default="tmp",
         help="Path to directory for temporary files",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--cpus",
         type=int,
         default=8,
         help="Number of CPUs used by processes",
     )
 
-    map_parser.add_argument(
+    profile_parser.add_argument(
         "--verbose",
         action="store_true",
     )
 
-    map_parser.set_defaults(func=run_map_command)
+    profile_parser.set_defaults(func=run_profile_command)
 
     return parser
 
@@ -162,7 +162,7 @@ def run_annotate_command(args):
     )
 
 
-def run_map_command(args):
+def run_profile_command(args):
     logger = logging.getLogger(__name__)
 
     r1 = args.read_1
@@ -178,7 +178,7 @@ def run_map_command(args):
 
     logger.info("Start mapping pipeline")
 
-    run_map(
+    run_profile(
         args.sample_id,
         r1,
         r2,
