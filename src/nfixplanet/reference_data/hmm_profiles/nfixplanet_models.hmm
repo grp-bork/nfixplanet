@@ -11441,7 +11441,7 @@ HMM          A        C        G        T
           0.01775  4.04006        *  1.46634  0.26236  0.00000        *
 //
 HMMER3/f [3.3.1 | Jul 2020]
-NAME  ChIl
+NAME  ChlL
 LENG  899
 MAXL  1708
 ALPH  DNA
