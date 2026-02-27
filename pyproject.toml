@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "nfixplanet"
-version = "0.1.1"
+version = "0.1.2"
 description = "Nitrogen Fixer detection pipeline"
 authors = [{name = "Shahriyar Mahdi Robbani", email = "shahriyar.robbani@embl.de" }]
 readme = "README.md"

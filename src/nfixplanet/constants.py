@@ -48,7 +48,7 @@ GENE_FAMILIES = [
     ),
     GeneFamily(
         name="chl",
-        required={"ChIl": 194.0, "ChlB": 67.0, "ChlN": 23.0},
+        required={"ChlL": 194.0, "ChlB": 67.0, "ChlN": 23.0},
         alternatives=[],
     ),
     GeneFamily(
