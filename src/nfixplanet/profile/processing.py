@@ -10,21 +10,20 @@ from nfixplanet.constants import (
 
 
 def load_otu_table(sample_path: str) -> pd.DataFrame:
+    """Get means for contigs"""
     df = pd.read_csv(sample_path, sep="\t")
 
-    # paired reads
+    # If paired and single
     if df.shape[1] == 5:
-        df["total_mean"] = (
-            df["nfix_reference_final.mmi.R1.clean_1.fastq.gz.Mean"]
-            + df["nfix_reference_final.mmi.RS.clean.fastq.gz.Mean"]
-        )
-        df = df[["Contig", "total_mean"]]
-        df.columns = ["Contig", "Mean"]
+        mean_cols = df.columns[df.columns.str.contains("Mean")]
+        row_sum = df[mean_cols].sum(axis=1)
+        df["Mean"] = row_sum
+    # Just rename columns
     else:
         df.columns = ["Contig", "Covered_Bases", "Mean"]
-        df = df[["Contig", "Mean"]]
 
-    return df
+    # only return mean
+    return df[["Contig", "Mean"]]
 
 
 def extract_sample_name(path: str) -> str:
