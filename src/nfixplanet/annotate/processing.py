@@ -28,7 +28,7 @@ def load_hmm_output(path: str) -> pd.DataFrame:
         "inc",
     ]
     df = pd.read_csv(
-        path,
+        filepath_or_buffer=path,
         delim_whitespace=True,
         names=column_names,
         usecols=range(len(column_names)),
@@ -97,7 +97,7 @@ def is_optional_gene_within_genomic_context_range(
     optional_gene_pos: int, positions: pd.Series, genomic_context_range: int
 ):
     # TODO: ask lucas if optional gene can be min - genomic_context_range
-    return positions.max() + genomic_context_range <= optional_gene_pos
+    return abs(optional_gene_pos - positions.max()) <= genomic_context_range
 
 
 def get_valid_contig_indexes(
@@ -129,7 +129,7 @@ def get_valid_contig_indexes(
         if alt_genes and not any(g in genes_present for g in alt_genes):
             continue
 
-        # if no duplicates
+        # a max and min check will work if there are no duplicates
         if not group["target_name"].duplicated().any():
             if not is_within_genomic_context_range(
                 group["gene"], genomic_context_range
@@ -154,12 +154,54 @@ def get_valid_contig_indexes(
                     genes_to_indices[row["target_name"]].append(idx)
                 else:
                     genes_to_indices[row["target_name"]].append(idx)
+        # sliding window is required if there are duplicates
         else:
-            duplicates = group[group["target_name"].duplicated()]
-            logger.info(f"Duplicates found for {contig}: {duplicates}")
-            # TODO: handle this case later
-            continue
+            duplicates = group[group["target_name"].duplicated(keep=False)]
+            logger.info(f"Duplicates found for {contig}")
 
+           # Sort by gene position to enable sliding window
+            group_sorted = group.sort_values("gene")
+            positions = group_sorted["gene"].values
+            genes = group_sorted["target_name"].values
+            indices = group_sorted.index.values
+
+            # Slide a window of size genomic_context_range over all rows,
+            # checking if any window contains all required genes (+ alt requirement)
+            for i in range(len(group_sorted)):
+                # select widow of position + genomic_context_range
+                window_mask = (positions >= positions[i]) & (
+                    positions <= positions[i] + genomic_context_range
+                )
+                window_names = set(genes[window_mask])
+                window_indices = indices[window_mask]
+                window_rows = group_sorted.loc[window_indices]
+
+                # All required genes must be present in this window
+                if not all(g in window_names for g in gene_family.required):
+                    continue
+
+                # At least one alternate gene must be present (if alternatives defined)
+                if alt_genes and not any(g in window_names for g in alt_genes):
+                    continue
+
+                # All rows in this valid window are valid so add their indices
+                for idx, row in window_rows.iterrows():
+                    gene_key = row["target_name"]
+
+                    if gene_family.name == "nif" and gene_key in alt_genes:
+                        gene_key = "nifH"
+                    elif gene_family.name == "vnf" and gene_key in alt_genes:
+                        gene_key = "vnfH"
+                    elif gene_key in optional_genes:
+                        if not is_optional_gene_within_genomic_context_range(
+                            row["gene"],
+                            group_sorted.loc[window_indices, "gene"],
+                            genomic_context_range,
+                        ):
+                            continue
+
+                    if idx not in genes_to_indices[gene_key]:
+                        genes_to_indices[gene_key].append(idx)
     return genes_to_indices
 
 
@@ -184,7 +226,7 @@ def get_filtered_top_hits(
     best_hmm_hits: pd.DataFrame,
     gene_family: GeneFamily,
     genomic_context_range: int,
-) -> dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame] | None:
     """
     Filter hits that meet the score threshold, gene requirements
     and neighborhood requirements
