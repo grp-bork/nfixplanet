@@ -99,11 +99,18 @@ def is_optional_gene_within_genomic_context_range(
 
 
 def get_valid_contig_indexes(
-    df: pd.DataFrame, gene_family: GeneFamily, genomic_context_range: int
+    hmm_df: pd.DataFrame, gene_family: GeneFamily, genomic_context_range: int
 ):
+    """
+    Get indices for rows that meet the following criteria:
+    1. all required genes are present
+    2. at least one alternative gene is present
+    3. all genes in the above set are withint the genomic_context_range
+    4. Optional genes are within the genomic_context_range of the largest value
+    """
     genes_to_indices = gene_family_to_dict(gene_family)
 
-    for contig, group in df.groupby("contig"):
+    for contig, group in hmm_df.groupby("contig"):
         genes_present = set(group["target_name"])
         # NOTE: this will break if there are more than one set of alternatives
         # Fix if that happens
@@ -154,47 +161,53 @@ def get_valid_contig_indexes(
     return genes_to_indices
 
 
-def write_filtered_top_hits(
-    df: pd.DataFrame,
+def get_genes_to_df(
+    genes_to_indexes: dict[str, list[int]],
+    hmm_df: pd.DataFrame,
+    gene_family: GeneFamily,
+) -> dict[str, pd.DataFrame]:
+    genes_to_df = {}
+    for gene, indexes in genes_to_indexes.items():
+        if not indexes:
+            logger.info(f"No hits for {gene} ({gene_family.name})")
+            continue
+        # logger.debug(f"family: {gene_family.name}\tgene: {gene}")
+        # logger.debug(hmm_df.head)
+        genes_to_df[gene] = hmm_df.loc[indexes].drop(columns=["contig", "gene"])
+
+    return genes_to_df
+
+
+def get_filtered_top_hits(
+    best_hmm_hits: pd.DataFrame,
     gene_family: GeneFamily,
     genomic_context_range: int,
-    output_dir: str,
-) -> dict[str, pd.DataFrame] | None:
+) -> dict[str, pd.DataFrame]:
     """
     Filter hits that meet the score threshold, gene requirements
     and neighborhood requirements
     """
     # Step 1: filter contigs that are above the bit score threshold
-    scored = filter_hits_by_score(df, gene_family)
-    if scored.empty:
+    hits_filtered_by_score = filter_hits_by_score(best_hmm_hits, gene_family)
+    if hits_filtered_by_score.empty:
         logger.info(f"No hits above threshold for {gene_family.name}")
         return None
 
     # Step 2: Get indexes which meet all filtering requirements
     genes_to_indexes = get_valid_contig_indexes(
-        scored, gene_family, genomic_context_range
+        hits_filtered_by_score, gene_family, genomic_context_range
     )
 
-    # Step 3: Write output
-    write_tsv(scored, genes_to_indexes, gene_family, output_dir)
+    # Step 3: Convert indexes to df
+    genes_to_df = get_genes_to_df(genes_to_indexes, best_hmm_hits, gene_family)
+
+    return genes_to_df
 
 
-def write_tsv(
-    df: pd.DataFrame,
-    genes_to_indices: dict[str, list[int]],
-    gene_family: GeneFamily,
-    output_dir: str,
-):
-    for gene, indices in genes_to_indices.items():
-        if not indices:
-            logger.info(f"No hits for {gene} ({gene_family.name})")
-            continue
-        # logger.debug(f"family: {gene_family.name}\tgene: {gene}")
-        # logger.debug(df.head)
+def write_tsvs(genes_to_df: dict[str, pd.DataFrame], output_dir: str):
+    for gene, df in genes_to_df.items():
         path = f"{output_dir}/{gene}.tsv"
-        df.loc[indices].drop(columns=["contig", "gene"]).to_csv(
-            f"{gene}.tsv", sep="\t", index=False
-        )
+        df.to_csv(path, sep="\t", index=False)
         logger.info(f"Created file: {path}")
 
 
@@ -202,6 +215,8 @@ def filter_and_write_files(path: str, output_dir: str, genomic_context_range: in
     hmm_output = load_hmm_output(path)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
     for family in GENE_FAMILIES:
-        write_filtered_top_hits(
-            best_hmm_hits, family, genomic_context_range, output_dir
+        genes_to_df = get_filtered_top_hits(
+            best_hmm_hits, family, genomic_context_range
         )
+        if genes_to_df:
+            write_tsvs(genes_to_df, output_dir)

@@ -1,45 +1,68 @@
 import os
 import pandas as pd
 import pytest
+from pandas.testing import assert_frame_equal
 
 from nfixplanet.annotate import processing
 from nfixplanet.constants import GENE_FAMILIES
 
 
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)
-def test_filter_top_hits_by_genes(gene_family):
+def test_filter_top_hits(gene_family):
     # load hmm_output once from a known test file
-    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_out_all.tbl")
+    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_output.tbl")
     hmm_output = processing.load_hmm_output(hmm_path)
     best_hits = processing.get_best_hmm_hits(hmm_output)
 
     # run filtering
-    genes_to_hits = processing.filter_top_hits_by_genes(best_hits, gene_family, genomic_context_range=10)
+    genes_to_hits = processing.get_filtered_top_hits(
+        best_hits, gene_family, genomic_context_range=10
+    )
 
     assert genes_to_hits is not None, "All test data should return hits"
 
-    for gene, df in genes_to_hits.items():
-        if df.empty:
+    for gene, gen_df in genes_to_hits.items():
+        if gen_df.empty:
             continue
 
-        if gene_family.name in ("nifE", "nifN") and gene in ("nifD", "nifH", "nifK"):
-            continue
-
-        # drop extra cols for fair comparison
-        df = df.drop(["contig", "gene"], axis=1)
+        # sort for fair comparison
+        gen_df = gen_df.sort_values(by=gen_df.columns[0]).reset_index(drop=True)
 
         # path to reference
-        ref_path = os.path.join("tests", "references", "output", "filter", f"{gene}.tsv")
+        ref_path = os.path.join(
+            "tests", "references", "output", "filter", f"04_{gene}_final.out"
+        )
         assert os.path.exists(ref_path), f"Missing reference file: {ref_path}"
 
         # read reference, no header
-        ref_df = pd.read_csv(ref_path, sep="\t", header=None)
+        ref_df = pd.read_csv(
+            ref_path,
+            sep="\t",
+            header=None,
+            names=[
+                "query_name",
+                "accession",
+                "target_name",
+                "full_accession",
+                "full_evalue",
+                "full_score",
+                "full_bias",
+                "domain_evalue",
+                "domain_score",
+                "domain_bias",
+                "exp",
+                "reg",
+                "clu",
+                "ov",
+                "env",
+                "dom",
+                "rep",
+                "inc",
+            ],
+        )
+        ref_df = ref_df.sort_values(by=ref_df.columns[0]).reset_index(drop=True)
 
-        # reset index for clean comparison
-        df_values = df.reset_index(drop=True).values
-        ref_values = ref_df.reset_index(drop=True).values
-
-        assert (
-            df_values == ref_values
-        ).all(), f"Mismatch for {gene_family.name}/{gene}"
-        break
+        # print(gene)
+        # print(ref_df)
+        # print(gen_df)
+        assert_frame_equal(ref_df, gen_df, check_dtype=False)
