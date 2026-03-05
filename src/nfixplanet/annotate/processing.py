@@ -46,14 +46,16 @@ def load_hmm_output(path: str) -> pd.DataFrame:
 
 
 def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
-    # For each query (gene locus), keep only the best-scoring HMM match:
-    # lowest e-value wins; ties broken by highest bit score
-    best_idx = df.groupby("query_name").apply(
-        lambda g: g.sort_values(
-            ["full_evalue", "full_score"], ascending=[True, False]
-        ).index[0]
+    """
+    For each query, keep only the best-scoring HMM match:
+    lowest e-value wins; ties broken by highest bit score
+    """
+    return (
+        df.sort_values(["full_evalue", "full_score"], ascending=[True, False])
+        .groupby("query_name", sort=False)
+        .first()
+        .reset_index()
     )
-    return df.loc[best_idx].reset_index(drop=True)
 
 
 def filter_hits_by_score(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataFrame:
