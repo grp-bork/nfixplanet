@@ -33,7 +33,7 @@ def load_hmm_output(path: str) -> pd.DataFrame:
         names=column_names,
         usecols=range(len(column_names)),
         comment="#",
-    )
+    )  # type: ignore
     ordered_cols = ["query_name", "accession"] + [
         col for col in column_names if col not in ["query_name", "accession"]
     ]
@@ -67,9 +67,10 @@ def filter_hits_by_score(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataFr
     for gene, threshold in gene_family.required.items():
         mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
 
-    for group in gene_family.alternatives:
-        for gene, threshold in group.items():
-            mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+    if gene_family.alternatives:
+        for group in gene_family.alternatives:
+            for gene, threshold in group.items():
+                mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
 
     return df[mask]
 
@@ -97,7 +98,9 @@ def is_optional_gene_within_genomic_context_range(
     optional_gene_pos: int, positions: pd.Series, genomic_context_range: int
 ):
     # TODO: ask lucas if optional gene can be min - genomic_context_range
-    return abs(optional_gene_pos - positions.max()) <= genomic_context_range
+    return (abs(optional_gene_pos - positions.max()) <= genomic_context_range) #or (
+    #     abs(optional_gene_pos - positions.min()) <= genomic_context_range
+    # )
 
 
 def get_valid_contig_indexes(
@@ -113,13 +116,28 @@ def get_valid_contig_indexes(
     genes_to_indices = gene_family_to_dict(gene_family)
 
     for contig, group in hmm_df.groupby("contig"):
+        # TODO: fix bug for vnf. Need to test alt sets separately.
+        if contig == "GCA_014;GCA_014222165.1;2485484.SAMN10347678.GCA_014222165" and gene_family.name == "vnf":
+            all_contigs = group["contig"]
+            print(group)
+            print(all_contigs)
+            x = list(all_contigs)
+            for a in x:
+                print(a)
+            print(group["target_name"])
+            print("test contig found")
+        
         genes_present = set(group["target_name"])
         # NOTE: this will break if there are more than one set of alternatives
         # Fix if that happens
         alt_genes = (
-            gene_family.alternatives[0].keys() if gene_family.alternatives else None
+            set(gene_family.alternatives[0].keys())
+            if gene_family.alternatives
+            else None
         )
-        optional_genes = gene_family.optional.keys()
+        optional_genes = (
+            set(gene_family.optional.keys()) if gene_family.optional else set()
+        )
 
         # All required genes not present
         if not all(g in genes_present for g in gene_family.required):
@@ -129,6 +147,15 @@ def get_valid_contig_indexes(
         if alt_genes and not any(g in genes_present for g in alt_genes):
             continue
 
+        def resolve_gene_key(target_name):
+            """Normalize alt gene names, return None if gene not relevant to this family."""
+            if gene_family.name == "nif" and alt_genes and target_name in alt_genes:
+                return "nifH"
+            elif gene_family.name == "vnf" and alt_genes and target_name in alt_genes:
+                return "vnfH"
+            else:
+                return target_name
+
         # a max and min check will work if there are no duplicates
         if not group["target_name"].duplicated().any():
             if not is_within_genomic_context_range(
@@ -136,30 +163,25 @@ def get_valid_contig_indexes(
             ):
                 continue
 
-            postions = group["gene"]
+            positions = group["gene"]
 
             for idx, row in group.iterrows():
                 # combine nifH and vnfH for nif
-                if gene_family.name == "nif" and row["target_name"] in alt_genes:
-                    genes_to_indices["nifH"].append(idx)
-                # combine nifH and vnfH for vnf
-                elif gene_family.name == "vnf" and row["target_name"] in alt_genes:
-                    genes_to_indices["vnfH"].append(idx)
-                # optional genes (nif)
-                elif row[
-                    "target_name"
-                ] in optional_genes and is_optional_gene_within_genomic_context_range(
-                    row["gene"], postions, genomic_context_range
-                ):
-                    genes_to_indices[row["target_name"]].append(idx)
-                else:
-                    genes_to_indices[row["target_name"]].append(idx)
+                gene_key = resolve_gene_key(row["target_name"])
+
+                if gene_key in optional_genes:
+                    if not is_optional_gene_within_genomic_context_range(
+                        row["gene"], positions, genomic_context_range
+                    ):
+                        continue
+
+                genes_to_indices[gene_key].append(idx) # type: ignore
         # sliding window is required if there are duplicates
         else:
             duplicates = group[group["target_name"].duplicated(keep=False)]
             logger.info(f"Duplicates found for {contig}")
 
-           # Sort by gene position to enable sliding window
+            # Sort by gene position to enable sliding window
             group_sorted = group.sort_values("gene")
             positions = group_sorted["gene"].values
             genes = group_sorted["target_name"].values
@@ -186,13 +208,9 @@ def get_valid_contig_indexes(
 
                 # All rows in this valid window are valid so add their indices
                 for idx, row in window_rows.iterrows():
-                    gene_key = row["target_name"]
+                    gene_key = resolve_gene_key(row["target_name"])
 
-                    if gene_family.name == "nif" and gene_key in alt_genes:
-                        gene_key = "nifH"
-                    elif gene_family.name == "vnf" and gene_key in alt_genes:
-                        gene_key = "vnfH"
-                    elif gene_key in optional_genes:
+                    if gene_key in optional_genes:
                         if not is_optional_gene_within_genomic_context_range(
                             row["gene"],
                             group_sorted.loc[window_indices, "gene"],
@@ -201,7 +219,8 @@ def get_valid_contig_indexes(
                             continue
 
                     if idx not in genes_to_indices[gene_key]:
-                        genes_to_indices[gene_key].append(idx)
+                        genes_to_indices[gene_key].append(idx) # type: ignore
+
     return genes_to_indices
 
 
