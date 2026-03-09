@@ -10,7 +10,7 @@ from nfixplanet.constants import GENE_FAMILIES
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)
 def test_filter_top_hits(gene_family):
     # load hmm_output once from a known test file
-    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_output.tbl")
+    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_output.tbl.gz")
     hmm_output = processing.load_hmm_output(hmm_path)
     best_hits = processing.get_best_hmm_hits(hmm_output)
 
@@ -30,7 +30,7 @@ def test_filter_top_hits(gene_family):
 
         # path to reference
         ref_path = os.path.join(
-            "tests", "references", "output", "filter", f"04_{gene}_final.out"
+            "tests", "references", "output", "filter", f"{gene}.tsv"
         )
         assert os.path.exists(ref_path), f"Missing reference file: {ref_path}"
 
@@ -38,27 +38,6 @@ def test_filter_top_hits(gene_family):
         ref_df = pd.read_csv(
             ref_path,
             sep="\t",
-            header=None,
-            names=[
-                "query_name",
-                "accession",
-                "target_name",
-                "full_accession",
-                "full_evalue",
-                "full_score",
-                "full_bias",
-                "domain_evalue",
-                "domain_score",
-                "domain_bias",
-                "exp",
-                "reg",
-                "clu",
-                "ov",
-                "env",
-                "dom",
-                "rep",
-                "inc",
-            ],
         )
         ref_df = ref_df.sort_values(by=ref_df.columns[0]).reset_index(drop=True)
 

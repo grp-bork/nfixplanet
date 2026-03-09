@@ -161,6 +161,8 @@ def get_valid_contig_indexes(
         # Slide a window of size genomic_context_range over all rows,
         # checking if any window contains all required genes (+ alt requirement)
         for i in range(len(group_sorted)):
+            # TODO: figure out early exit for speedup
+
             # select widow of position + genomic_context_range
             window_mask = (positions >= positions[i]) & (
                 positions <= positions[i] + genomic_context_range
@@ -179,6 +181,7 @@ def get_valid_contig_indexes(
 
             # All rows in this valid window are valid so add their indices
             for idx, row in window_rows.iterrows():
+                # TODO: figure out early exit for speedup
                 gene_key = resolve_gene_key(row["target_name"], gene_family, alt_genes)
 
                 if gene_key in optional_genes:
