@@ -10,7 +10,9 @@ from nfixplanet.constants import GENE_FAMILIES
 @pytest.mark.parametrize("gene_family", GENE_FAMILIES, ids=lambda f: f.name)
 def test_filter_top_hits(gene_family):
     # load hmm_output once from a known test file
-    hmm_path = os.path.join("tests", "references", "input", "filter", "hmm_output.tbl.gz")
+    hmm_path = os.path.join(
+        "tests", "references", "input", "filter", "hmm_output.tbl.gz"
+    )
     hmm_output = processing.load_hmm_output(hmm_path)
     best_hits = processing.get_best_hmm_hits(hmm_output)
 
@@ -45,3 +47,9 @@ def test_filter_top_hits(gene_family):
         # print(ref_df)
         # print(gen_df)
         assert_frame_equal(ref_df, gen_df, check_dtype=False)
+
+        # try:
+        #     assert_frame_equal(ref_df, gen_df, check_dtype=False)
+        # except AssertionError:
+        #     print(f"failed: {gene}")
+        #     gen_df.to_csv(f"{gene}.tsv", sep="\t", index=False)

@@ -18,12 +18,14 @@ class GeneFamily:
     optional: dict[str, float] | None
 
 
+# NOTE: all values can be removed since we no longer do any
+# manual filtering
 GENE_FAMILIES = [
     GeneFamily(
         name="nif",
         required={"nifD": 583.6, "nifK": 460.0},
         alternatives=[{"nifH": 279.5, "vnfH": 150.6}],
-        optional = {"nifE": 504.6, "nifN": 530},
+        optional={"nifE": 504.6, "nifN": 530},
     ),
     GeneFamily(
         name="vnf",
@@ -74,7 +76,9 @@ MAP_TOOLS = [
 HOSTILE_CACHE_DIR = Path("~/.local/share/hostile").expanduser()
 
 NFIXPLANET_CACHE_DIR = Path("~/.local/share/nfixplanet").expanduser()
-REFERENCE_FASTA_URL = "https://zenodo.org/records/18772121/files/nfix_reference_v1.0.0.fna.gz?download=1"
+REFERENCE_FASTA_URL = (
+    "https://zenodo.org/records/18772121/files/nfix_reference_v1.0.0.fna.gz?download=1"
+)
 REFERENCE_FASTA_NAME = NFIXPLANET_CACHE_DIR / "nfix_reference_v1.0.0.fna"
 REFERENCE_INDEX_NAME = NFIXPLANET_CACHE_DIR / "nfix_reference_v1.0.0.fna.mmi"
 

@@ -58,19 +58,19 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def filter_hits_by_score(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataFrame:
+def filter_hits_by_family(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataFrame:
     """
-    Keep only rows where the target gene passes its family-specific bitscore threshold.
+    Keep only rows where the target gene contains all required family members.
     """
     mask = pd.Series(False, index=df.index)
 
-    for gene, threshold in gene_family.required.items():
-        mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+    for gene, _ in gene_family.required.items():
+        mask |= (df["target_name"] == gene)
 
     if gene_family.alternatives:
         for group in gene_family.alternatives:
-            for gene, threshold in group.items():
-                mask |= (df["target_name"] == gene) & (df["full_score"] > threshold)
+            for gene, _ in group.items():
+                mask |= (df["target_name"] == gene)
 
     return df[mask]
 
@@ -224,15 +224,15 @@ def get_filtered_top_hits(
     Filter hits that meet the score threshold, gene requirements
     and neighborhood requirements
     """
-    # Step 1: filter contigs that are above the bit score threshold
-    hits_filtered_by_score = filter_hits_by_score(best_hmm_hits, gene_family)
-    if hits_filtered_by_score.empty:
+    # Step 1: filter contigs to only keep genes from the family
+    hits_filtered_by_family = filter_hits_by_family(best_hmm_hits, gene_family)
+    if hits_filtered_by_family.empty:
         logger.info(f"No hits above threshold for {gene_family.name}")
         return None
 
     # Step 2: Get indexes which meet all filtering requirements
     genes_to_indexes = get_valid_contig_indexes(
-        hits_filtered_by_score, gene_family, genomic_context_range
+        hits_filtered_by_family, gene_family, genomic_context_range
     )
 
     # Step 3: Convert indexes to df
