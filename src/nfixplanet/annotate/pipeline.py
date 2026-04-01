@@ -18,10 +18,10 @@ def run_annotate(
     cpus: int,
 ):
     """Run nitrogen fixer annotation pipeline"""
-    utils.check_external_tools(ANNOTATE_TOOLS)
     os.makedirs(output_dir, exist_ok=True)
 
     if input_genome:
+        utils.check_external_tools(ANNOTATE_TOOLS)
         genome_path = input_genome
         orf_path = f"{output_dir}/prodigal_output.fna"
         hmm_path = f"{output_dir}/hmm_output.tbl"
@@ -29,6 +29,7 @@ def run_annotate(
         tools.prodigal(genome_path, orf_path)
         tools.hmmscan(orf_path, hmm_path, cpus)
     elif input_orf:
+        utils.check_external_tools("hmmscan")
         orf_path = input_orf
         hmm_path = f"{output_dir}/hmm_output.tbl"
         logger.info("Input ORFs provided, skipping Prodigal")
