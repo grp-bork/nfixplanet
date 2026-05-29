@@ -60,19 +60,16 @@ def get_best_hmm_hits(df: pd.DataFrame) -> pd.DataFrame:
 
 def filter_hits_by_family(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataFrame:
     """
-    Keep only rows where the target gene contains all required family members.
+    Keep only rows where the target gene contains a family member.
     """
-    mask = pd.Series(False, index=df.index)
-
-    for gene, _ in gene_family.required.items():
-        mask |= (df["target_name"] == gene)
-
+    family_genes = set(gene_family.required)
     if gene_family.alternatives:
         for group in gene_family.alternatives:
-            for gene, _ in group.items():
-                mask |= (df["target_name"] == gene)
-
-    return df[mask]
+            family_genes |= set(group)
+    if gene_family.optional:
+        family_genes |= set(gene_family.optional)
+        
+    return df[df["target_name"].isin(family_genes)]
 
 
 def gene_family_to_dict(gf: GeneFamily) -> dict[str, list[int]]:
