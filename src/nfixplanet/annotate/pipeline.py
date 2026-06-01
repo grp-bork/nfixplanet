@@ -29,7 +29,7 @@ def run_annotate(
         tools.prodigal(genome_path, orf_path)
         tools.hmmscan(orf_path, hmm_path, cpus)
     elif input_orf:
-        utils.check_external_tools("hmmscan")
+        utils.check_external_tools(["hmmscan"])
         orf_path = input_orf
         hmm_path = f"{output_dir}/hmm_output.tbl"
         logger.info("Input ORFs provided, skipping Prodigal")
