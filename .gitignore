@@ -5,4 +5,4 @@ out/
 .pytest_cache
 dist/
 .vscode
-tmp
+tmp*

@@ -9,7 +9,7 @@ exclude = [
 
 [project]
 name = "nfixplanet"
-version = "0.1.6"
+version = "0.1.7"
 description = "Nitrogen Fixer detection pipeline"
 authors = [{name = "Shahriyar Mahdi Robbani", email = "shahriyar.robbani@embl.de" }]
 readme = "README.md"
