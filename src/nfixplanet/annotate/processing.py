@@ -62,14 +62,21 @@ def filter_hits_by_family(df: pd.DataFrame, gene_family: GeneFamily) -> pd.DataF
     """
     Keep only rows where the target gene contains a family member.
     """
-    family_genes = set(gene_family.required)
+    mask = pd.Series(False, index=df.index)
+
+    for gene in gene_family.required.keys():
+        mask |= df["target_name"] == gene
+
     if gene_family.alternatives:
         for group in gene_family.alternatives:
-            family_genes |= set(group)
+            for gene in group.keys():
+                mask |= df["target_name"] == gene
+
     if gene_family.optional:
-        family_genes |= set(gene_family.optional)
-        
-    return df[df["target_name"].isin(family_genes)]
+        for gene in gene_family.optional:
+            mask |= df["target_name"] == gene
+
+    return df[mask]
 
 
 def gene_family_to_dict(gf: GeneFamily) -> dict[str, list[int]]:
@@ -85,19 +92,6 @@ def gene_family_to_dict(gf: GeneFamily) -> dict[str, list[int]]:
         result.update({k: [] for k in gf.optional})
 
     return result
-
-
-def is_within_genomic_context_range(positions: pd.Series, genomic_context_range: int):
-    return (positions.max() - positions.min()) <= genomic_context_range
-
-
-def is_optional_gene_within_genomic_context_range(
-    optional_gene_pos: int, positions: pd.Series, genomic_context_range: int
-):
-    # TODO: ask lucas if optional gene can be min - genomic_context_range
-    return abs(optional_gene_pos - positions.max()) <= genomic_context_range  # or (
-    #     abs(optional_gene_pos - positions.min()) <= genomic_context_range
-    # )
 
 
 def resolve_gene_key(
@@ -119,23 +113,19 @@ def get_valid_contig_indexes(
     Get indices for rows that meet the following criteria:
     1. all required genes are present
     2. at least one alternative gene is present
-    3. all genes in the above set are withint the genomic_context_range
-    4. Optional genes are within the genomic_context_range of the largest value
+    3. all genes in the above set are within the genomic_context_range
+    Optional genes are included if they are within the genomic_context_range
     """
     genes_to_indices = gene_family_to_dict(gene_family)
 
+    # NOTE: this will break if there are more than one set of alternatives
+    # Fix if that happens
+    alt_genes = (
+        set(gene_family.alternatives[0].keys()) if gene_family.alternatives else None
+    )
+
     for contig, group in hmm_df.groupby("contig"):
         genes_present = set(group["target_name"])
-        # NOTE: this will break if there are more than one set of alternatives
-        # Fix if that happens
-        alt_genes = (
-            set(gene_family.alternatives[0].keys())
-            if gene_family.alternatives
-            else None
-        )
-        optional_genes = (
-            set(gene_family.optional.keys()) if gene_family.optional else set()
-        )
 
         # All required genes not present
         if not all(g in genes_present for g in gene_family.required):
@@ -181,14 +171,6 @@ def get_valid_contig_indexes(
                 # TODO: figure out early exit for speedup
                 gene_key = resolve_gene_key(row["target_name"], gene_family, alt_genes)
 
-                if gene_key in optional_genes:
-                    if not is_optional_gene_within_genomic_context_range(
-                        row["gene"],
-                        group_sorted.loc[window_indices, "gene"],
-                        genomic_context_range,
-                    ):
-                        continue
-
                 if idx not in genes_to_indices[gene_key]:
                     genes_to_indices[gene_key].append(idx)  # type: ignore
 
@@ -216,7 +198,7 @@ def get_filtered_top_hits(
     best_hmm_hits: pd.DataFrame,
     gene_family: GeneFamily,
     genomic_context_range: int,
-) -> dict[str, pd.DataFrame] | None:
+) -> tuple[dict[str, pd.DataFrame]] | None:
     """
     Filter hits that meet the score threshold, gene requirements
     and neighborhood requirements
@@ -226,6 +208,10 @@ def get_filtered_top_hits(
     if hits_filtered_by_family.empty:
         logger.info(f"No hits above threshold for {gene_family.name}")
         return None
+
+    # # DEBUG: print output by family
+    # hits_filtered_by_family = hits_filtered_by_family.sort_values(by=['contig', 'gene'])
+    # hits_filtered_by_family.to_csv(f"{gene_family.name}.tsv", sep="\t")
 
     # Step 2: Get indexes which meet all filtering requirements
     genes_to_indexes = get_valid_contig_indexes(
