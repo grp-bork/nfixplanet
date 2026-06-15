@@ -16,6 +16,7 @@ def run_annotate(
     output_dir: str,
     genomic_context_range: int,
     cpus: int,
+    custom_hmm_format: bool,
 ):
     """Run nitrogen fixer annotation pipeline"""
     os.makedirs(output_dir, exist_ok=True)
@@ -39,5 +40,7 @@ def run_annotate(
         hmm_path = input_hmm
         logger.info("Input HMMs provided, skipping Prodigal and HMMscan")
 
-    processing.filter_and_write_files(hmm_path, output_dir, genomic_context_range)
+    processing.filter_and_write_files(
+        hmm_path, output_dir, genomic_context_range, custom_hmm_format=custom_hmm_format
+    )
     logger.info("Pipeline completed")
