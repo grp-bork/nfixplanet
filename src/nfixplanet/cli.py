@@ -51,6 +51,13 @@ def get_parser():
     )
 
     annotate_parser.add_argument(
+        "--custom_hmm_format",
+        action="store_true",
+        help="Read input HMM table without HMMER header, with query and target columns swapped.",
+        default=False,
+    )
+
+    annotate_parser.add_argument(
         "--output_directory",
         required=True,
         help="Path to output directory",
@@ -150,6 +157,13 @@ def run_annotate_command(args):
             "At least one of --input_genomes, --input_orfs, or --input_hmms must be provided"
         )
 
+    if args.custom_hmm_format and (
+        not args.input_hmms or args.input_genomes or args.input_orfs
+    ):
+        raise SystemExit(
+            "--custom_hmm_format can only be used when --input_hmms is the annotate input"
+        )
+
     logger.info("Start annotation pipeline")
 
     run_annotate(
@@ -159,6 +173,7 @@ def run_annotate_command(args):
         args.output_directory,
         args.genomic_context_range,
         args.cpus,
+        args.custom_hmm_format,
     )
 
 

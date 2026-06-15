@@ -6,7 +6,7 @@ from nfixplanet.constants import GeneFamily, GENE_FAMILIES
 logger = logging.getLogger(__name__)
 
 
-def load_hmm_output(path: str) -> pd.DataFrame:
+def load_hmm_output(path: str, custom_hmm_format: bool) -> pd.DataFrame:
     column_names = [
         "target_name",
         "accession",
@@ -29,11 +29,17 @@ def load_hmm_output(path: str) -> pd.DataFrame:
     ]
     df = pd.read_csv(
         filepath_or_buffer=path,
-        delim_whitespace=True,
+        sep=r"\s+",
         names=column_names,
         usecols=range(len(column_names)),
         comment="#",
     )  # type: ignore
+    if custom_hmm_format:
+        # Custom input_hmms files have target/query columns swapped from hmmscan output.
+        df[["target_name", "query_name"]] = df[
+            ["query_name", "target_name"]
+        ].to_numpy()
+
     ordered_cols = ["query_name", "accession"] + [
         col for col in column_names if col not in ["query_name", "accession"]
     ]
@@ -231,8 +237,13 @@ def write_tsvs(genes_to_df: dict[str, pd.DataFrame], output_dir: str):
         logger.info(f"Created file: {path}")
 
 
-def filter_and_write_files(path: str, output_dir: str, genomic_context_range: int):
-    hmm_output = load_hmm_output(path)
+def filter_and_write_files(
+    path: str,
+    output_dir: str,
+    genomic_context_range: int,
+    custom_hmm_format: bool = False,
+):
+    hmm_output = load_hmm_output(path, custom_hmm_format=custom_hmm_format)
     best_hmm_hits = get_best_hmm_hits(hmm_output)
     for family in GENE_FAMILIES:
         genes_to_df = get_filtered_top_hits(
