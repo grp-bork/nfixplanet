@@ -29,10 +29,23 @@ def run_profile(
     output_dir: str,
     work_dir: str,
     cpus: int,
+    input_coverage: str | None,
 ):
     """
-    preprocess_fastqs -> clean_fastq -> coverm
+    preprocess_fastqs -> clean_fastq -> coverm -> process results
+    OR coverm -> process results
     """
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    if input_coverage:
+        tools.check_files_exist([input_coverage])
+        logger.info(
+            "Input CoverM coverage provided, skipping FASTQ processing and mapping"
+        )
+        process_coverage_results(sample_id, input_coverage, output_dir)
+        logger.info(f"Finished processing coverage table for sample {sample_id}")
+        return
+
     utils.check_external_tools(MAP_TOOLS)
     ensure_dir(work_dir)
 
@@ -153,7 +166,6 @@ def run_profile(
     # --------------------
     # COVERM
     # --------------------
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
     coverage_file = f"{output_dir}/{sample_id}_coverage.tsv"
 
     tools.coverm_contig(
@@ -165,14 +177,19 @@ def run_profile(
         cpus=cpus,
     )
 
-    # --------------------
-    # Process results
-    # --------------------
-    gene_file = f"{output_dir}/{sample_id}_gene_table.tsv"
-    otu_file = f"{output_dir}/{sample_id}_OTU_table.tsv"
-    processing.annotate_mapping_results(coverage_file, gene_file, otu_file)
-    processing.profile_results(otu_file, output_dir)
+    process_coverage_results(sample_id, coverage_file, output_dir)
 
     logger.info(f"Finished calculating coverage score for sample {sample_id}")
 
 
+def process_coverage_results(sample_id: str, coverage_file: str, output_dir: str):
+    logger.info("Processing CoverM results")
+    gene_file = f"{output_dir}/{sample_id}_gene_table.tsv"
+    otu_file = f"{output_dir}/{sample_id}_OTU_table.tsv"
+    processing.annotate_mapping_results(
+        coverage_file,
+        gene_file,
+        otu_file,
+        sample_name=sample_id,
+    )
+    processing.profile_results(otu_file, output_dir)

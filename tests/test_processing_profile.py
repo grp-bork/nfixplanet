@@ -78,6 +78,34 @@ def test_annotate_mapping_results(tmp_path, sample_file, gene_ref, otu_ref):
         )
 
 
+def test_annotate_mapping_results_uses_explicit_sample_name(tmp_path):
+    output_dir = tmp_path / "annotate_map"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    coverage_input = os.path.join(
+        "tests",
+        "references",
+        "input",
+        "annotate_map",
+        "5O_Y1.2_coverage.tsv",
+    )
+    gene_out = output_dir / "gene_table.tsv"
+    otu_out = output_dir / "OTU_table.tsv"
+
+    processing.annotate_mapping_results(
+        coverage_input,
+        str(gene_out),
+        str(otu_out),
+        sample_name="custom_sample",
+    )
+
+    gene_df = pd.read_csv(gene_out, sep="\t")
+    otu_df = pd.read_csv(otu_out, sep="\t")
+
+    assert "custom_sample" in gene_df.columns
+    assert "custom_sample" in otu_df.columns
+
+
 @pytest.mark.parametrize(
     "otu_input,ref_dir",
     [
