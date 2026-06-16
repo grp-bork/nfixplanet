@@ -118,6 +118,16 @@ def get_parser():
     )
 
     profile_parser.add_argument(
+        "--input_coverage",
+        type=str,
+        help=(
+            "Path to CoverM coverage table produced with "
+            "'coverm contig --methods covered_bases mean'. "
+            "Skips FASTQ processing and mapping."
+        ),
+    )
+
+    profile_parser.add_argument(
         "--output_directory",
         type=str,
         required=True,
@@ -183,12 +193,19 @@ def run_profile_command(args):
     r1 = args.read_1
     r2 = args.read_2
     s = args.single
+    input_coverage = args.input_coverage
 
     paired = r1 and r2
+    read_input = r1 or r2 or s
 
-    if not s and not paired:
+    if input_coverage and read_input:
+        raise SystemExit(
+            "--input_coverage cannot be used with --read_1, --read_2, or --single"
+        )
+
+    if not input_coverage and not s and not paired:
         raise SystemError(
-            "At least either --read_1 and --read_2 must be provided or --single must be provided"
+            "At least either --read_1 and --read_2, --single, or --input_coverage must be provided"
         )
 
     logger.info("Start mapping pipeline")
@@ -201,6 +218,7 @@ def run_profile_command(args):
         args.output_directory,
         args.work_directory,
         args.cpus,
+        input_coverage,
     )
 
 

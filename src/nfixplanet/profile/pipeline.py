@@ -1,8 +1,7 @@
-import gzip
-import shutil
 import logging
 from pathlib import Path
 
+from nfixplanet.profile import fastq
 from nfixplanet.profile import tools
 from nfixplanet.profile import processing
 from nfixplanet import utils
@@ -21,19 +20,7 @@ def ensure_dir(path: str):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def run_profile(
-    sample_id: str,
-    r1: str | None,
-    r2: str | None,
-    single: str | None,
-    output_dir: str,
-    work_dir: str,
-    cpus: int,
-):
-    """
-    preprocess_fastqs -> clean_fastq -> coverm
-    """
-    utils.check_external_tools(MAP_TOOLS)
+def prepare_work_dirs(work_dir: str) -> tuple[str, str]:
     ensure_dir(work_dir)
 
     fastp_dir = f"{work_dir}/processed_fastqs"
@@ -42,137 +29,125 @@ def run_profile(
     ensure_dir(fastp_dir)
     ensure_dir(clean_dir)
 
-    processed_r1 = None
-    processed_r2 = None
-    processed_s = None
+    return fastp_dir, clean_dir
 
-    # --------------------
-    # FASTP
-    # --------------------
-    unpaired_file = None
-    singles_file = None
 
-    if r1 and r2:
-        tools.check_files_exist([r1, r2])
+def run_profile(
+    sample_id: str,
+    r1: str | None,
+    r2: str | None,
+    single: str | None,
+    output_dir: str,
+    work_dir: str,
+    cpus: int,
+    input_coverage: str | None,
+):
+    """
+    preprocess_fastqs -> clean_fastq -> coverm -> process results
+    OR coverm -> process results
+    """
+    ensure_dir(output_dir)
 
-        processed_r1 = f"{fastp_dir}/R1.fq.gz"
-        processed_r2 = f"{fastp_dir}/R2.fq.gz"
-        unpaired_file = f"{fastp_dir}/unpaired.fq"
-
-        paired_html = f"{fastp_dir}/paired.html"
-        paired_json = f"{fastp_dir}/paired.json"
-
-        tools.fastp_paired(
-            r1_in=r1,
-            r2_in=r2,
-            r1_out=processed_r1,
-            r2_out=processed_r2,
-            unpaired=unpaired_file,
-            html=paired_html,
-            json=paired_json,
-            cpus=min(cpus, 4),
+    if input_coverage:
+        tools.check_files_exist([input_coverage])
+        logger.info(
+            "Input CoverM coverage provided, skipping FASTQ processing and mapping"
         )
+        process_coverage_results(sample_id, input_coverage, output_dir)
+        logger.info(f"Finished processing coverage table for sample {sample_id}")
+        return
 
-    if single:
-        tools.check_files_exist([single])
+    utils.check_external_tools(MAP_TOOLS)
 
-        singles_file = f"{fastp_dir}/singles.fq"
+    # Fastp
+    fastp_dir, clean_dir = prepare_work_dirs(work_dir)
+    processed_reads = fastq.prepare_fastqs(r1, r2, single, fastp_dir, cpus)
 
-        single_html = f"{fastp_dir}/single.html"
-        single_json = f"{fastp_dir}/single.json"
+    # Hostile
+    ensure_hostile_index()
+    cleaned_reads = clean_fastqs(processed_reads, clean_dir, cpus)
+    
+    # CoverM
+    ensure_reference_index(cpus)
+    coverage_file = run_coverm(sample_id, output_dir, cleaned_reads, cpus)
+    
+    logger.info(f"Finished calculating coverage score for sample {sample_id}")
 
-        tools.fastp_single(
-            s_in=single,
-            s_out=singles_file,
-            html=single_html,
-            json=single_json,
-            cpus=cpus,
-        )
-        # --------------------
-        # MERGE UNPAIRED + SINGLES
-        # --------------------
-        merged_rs = f"{fastp_dir}/RS.fq"
-        merged_rs_gz = f"{fastp_dir}/RS.fq.gz"
+    # Processing
+    process_coverage_results(sample_id, coverage_file, output_dir)
 
-        with open(merged_rs, "wb") as outfile:
-            if singles_file and Path(singles_file).exists():
-                with open(singles_file, "rb") as infile:
-                    shutil.copyfileobj(infile, outfile)
+    logger.info("Pipeline complete")
 
-            if unpaired_file and Path(unpaired_file).exists():
-                with open(unpaired_file, "rb") as infile:
-                    shutil.copyfileobj(infile, outfile)
 
-        # gzip only if file has content
-        if Path(merged_rs).exists() and Path(merged_rs).stat().st_size > 0:
-            with open(merged_rs, "rb") as f_in, gzip.open(merged_rs_gz, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-
-            processed_s = merged_rs_gz
-        else:
-            processed_s = None
-
-    # --------------------
-    # HOSTILE INDEX
-    # --------------------
+def ensure_hostile_index():
     hostile_cache_path = Path(HOSTILE_CACHE_DIR).expanduser()
     hostile_cache_path.mkdir(parents=True, exist_ok=True)
     if not any(hostile_cache_path.iterdir()):
         tools.hostile_index_fetch()
 
-    # --------------------
-    # HOSTILE CLEAN
-    # --------------------
+
+def clean_fastqs(
+    processed_reads: fastq.FastqPaths,
+    clean_dir: str,
+    cpus: int,
+) -> fastq.FastqPaths:
     cleaned_r1 = None
     cleaned_r2 = None
-    cleaned_s = None
+    cleaned_single = None
 
-    if processed_r1 and processed_r2:
+    if processed_reads.r1 and processed_reads.r2:
         cleaned_r1, cleaned_r2 = tools.hostile_clean_paired(
-            r1=processed_r1,
-            r2=processed_r2,
+            r1=processed_reads.r1,
+            r2=processed_reads.r2,
             out_dir=clean_dir,
             cpus=cpus,
         )
 
-    if processed_s:
-        cleaned_s = tools.hostile_clean_single(
-            s=processed_s,
+    if processed_reads.single:
+        cleaned_single = tools.hostile_clean_single(
+            s=processed_reads.single,
             out_dir=clean_dir,
             cpus=cpus,
         )
 
-    # --------------------
-    # MINIMAP INDEX
-    # --------------------
+    return fastq.FastqPaths(cleaned_r1, cleaned_r2, cleaned_single)
+
+
+def ensure_reference_index(cpus: int):
     NFIXPLANET_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     if not REFERENCE_INDEX_NAME.exists():
         tools.build_minimap_index(min(cpus, 3))
 
-    # --------------------
-    # COVERM
-    # --------------------
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+def run_coverm(
+    sample_id: str,
+    output_dir: str,
+    cleaned_reads: fastq.FastqPaths,
+    cpus: int,
+) -> str:
     coverage_file = f"{output_dir}/{sample_id}_coverage.tsv"
 
     tools.coverm_contig(
-        r1=cleaned_r1,
-        r2=cleaned_r2,
-        single=cleaned_s,
+        r1=cleaned_reads.r1,
+        r2=cleaned_reads.r2,
+        single=cleaned_reads.single,
         reference_index=str(REFERENCE_INDEX_NAME),
         output_file=coverage_file,
         cpus=cpus,
     )
 
-    # --------------------
-    # Process results
-    # --------------------
+    return coverage_file
+
+
+def process_coverage_results(sample_id: str, coverage_file: str, output_dir: str):
+    logger.info("Processing CoverM results")
     gene_file = f"{output_dir}/{sample_id}_gene_table.tsv"
     otu_file = f"{output_dir}/{sample_id}_OTU_table.tsv"
-    processing.annotate_mapping_results(coverage_file, gene_file, otu_file)
+    processing.annotate_mapping_results(
+        coverage_file,
+        gene_file,
+        otu_file,
+        sample_name=sample_id,
+    )
     processing.profile_results(otu_file, output_dir)
-
-    logger.info(f"Finished calculating coverage score for sample {sample_id}")
-
-

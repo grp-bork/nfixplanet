@@ -78,12 +78,18 @@ def compute_genome_normalized_table(
     return normalized
 
 
-def annotate_mapping_results(coverage_file: str, gene_file: str, otu_file: str):
+def annotate_mapping_results(
+    coverage_file: str,
+    gene_file: str,
+    otu_file: str,
+    sample_name: str | None = None,
+):
     """Process coverage data to generate gene-level and genome-normalized OTU tables."""
     reference_df = pd.read_csv(MAPPING_REFERENCE, sep="\t")
     otu_df = load_otu_table(coverage_file)
 
-    sample_name = extract_sample_name(coverage_file)
+    if sample_name is None:
+        sample_name = extract_sample_name(coverage_file)
 
     # merge with annotation
     merged_df = reference_df.merge(
