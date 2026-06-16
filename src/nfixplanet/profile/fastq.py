@@ -36,9 +36,8 @@ def prepare_fastqs(
     if single:
         singles_file = run_fastp_single_reads(single, fastp_dir, cpus)
         processed_single = merge_single_reads(singles_file, unpaired_file, fastp_dir)
-    # TODO: handle unpaired_reads if no sinlge
-    # elif unpaired_file:
-    #     processed_single = unpaired_file
+    elif unpaired_file:
+        processed_single = prepare_unpaired_reads(unpaired_file, fastp_dir)
 
     return FastqPaths(processed_r1, processed_r2, processed_single)
 
@@ -103,6 +102,13 @@ def merge_single_reads(
 
     gzip_file(merged_reads, merged_reads_gz)
     return merged_reads_gz
+
+
+def prepare_unpaired_reads(unpaired_file: str, fastp_dir: str) -> str | None:
+    if not has_content(unpaired_file):
+        return None
+
+    return merge_single_reads(unpaired_file, None, fastp_dir)
 
 
 def copy_file_if_present(path: str, outfile):
