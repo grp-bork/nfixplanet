@@ -135,6 +135,7 @@ def profile_results(otu_path: str, output_dir: str):
     # Stop autoconverting "" to "NaN"
     tax_df = pd.read_csv(TAXONOMY_REFERENCE, sep="\t", keep_default_na=False)
     otu_df = pd.read_csv(otu_path, sep="\t")
+    # TODO: merge here
 
     for rank in ["d", "p", "c", "o", "f", "g", "s"]:
         sum_otu_by_group(rank, otu_df, tax_df, output_dir)
