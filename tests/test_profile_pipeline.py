@@ -12,6 +12,7 @@ def test_profile_pipeline_with_input_coverage(tmp_path):
         "tests/references/input/annotate_map/5O_Y1.2_coverage.tsv"
     )
     reference_dir = Path("tests/references/output/annotate_map")
+    reference_profile_dir = Path("tests/references/output/profile")
 
     run_profile(
         sample_id,
@@ -43,6 +44,38 @@ def test_profile_pipeline_with_input_coverage(tmp_path):
             reference_df = reference_df.sort_values(
                 by=list(reference_df.columns)
             ).reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(
+            produced_df,
+            reference_df,
+            check_dtype=False,
+        )
+
+    for rank in ["d", "p", "c", "o", "f", "g", "s"]:
+        filename = f"OTU_group_summed_by_{rank}.tsv"
+        produced_path = output_dir / filename
+        reference_path = reference_profile_dir / filename
+
+        assert produced_path.exists()
+
+        produced_df = (
+            pd.read_csv(
+                produced_path,
+                sep="\t",
+                keep_default_na=False,
+            )
+            .sort_values(by=rank)
+            .reset_index(drop=True)
+        )
+        reference_df = (
+            pd.read_csv(
+                reference_path,
+                sep="\t",
+                keep_default_na=False,
+            )
+            .sort_values(by=rank)
+            .reset_index(drop=True)
+        )
 
         pd.testing.assert_frame_equal(
             produced_df,
