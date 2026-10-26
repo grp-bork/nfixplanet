@@ -8,7 +8,7 @@ NFixPlanet provides workflows for identifying nitrogen fixation genes in genomes
 
 The package contains two main workflows:
 - **Genome annotation** (`annotate`) — identifies nitrogen fixation genes and operons in genome assemblies using HMMs and genomic context filtering.
-- **Metagenome quantification** (`profile`) — maps short reads to a diazotroph reference database and computes gene abundance, genome abundance, and taxonomic relative abundance.
+- **Metagenome quantification** (`map`) — maps short reads to a diazotroph reference database and computes gene abundance, genome abundance, and taxonomic relative abundance.
 
 The metagenome workflow currently supports short-read sequencing data only, as abundance estimation relies on short-read coverage profiling.
 
@@ -75,7 +75,7 @@ Optional arguments:
 - `--verbose`: Enable verbose (DEBUG) logging.
 - `--version`: Print version number and exit.
 
-### nfixplanet profile
+### nfixplanet map
 Pipeline for quantifying diazotroph gene, genome, and taxonomic abundance from short-read metagenomes.
 
 This workflow integrates read mapping, abundance estimation, and taxonomic profiling into a single pipeline.
@@ -99,7 +99,7 @@ These outputs provide both functional and taxonomic quantification of diazotroph
 Basic command:
 
 ```bash
-nfixplanet profile \
+nfixplanet map \
   --sample_id SAMPLE_NAME \
   --read_1 /path/to/read_1.fastq \
   --read_2 /path/to/read_2.fastq \
